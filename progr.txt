@@ -1,0 +1,14 @@
+int x; int y; bool b1; bool b2;
+char abc (char a, int b, char c);
+char a; char b; char c; float xyz;
+
+Hello, world!
+x=2.0;
+x=-5.0;
+b1=b1&&b2;
+b1=b1||b2;
+b2=!b1;
+b1=b1&&b2||b1&&!b2;
+y=2+3+x*y;
+abc(a,2,c+b);
+Goodbye, world!
