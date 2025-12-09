@@ -1,14 +1,52 @@
-int x; int y; bool b1; bool b2;
-char abc (char a, int b, char c);
-char a; char b; char c; float xyz;
+summon x as int;
+summon y as float;
+summon flag as bool;
+
+arise Player {
+    summon hp as int;
+    summon power as float;
+    summon attack as void (int damage) {
+         hp = hp - damage;
+    };
+};
+
+summon p1 as Player;
+
+summon calculate as float (float a, float b) {
+    summon res as float;
+    res = a * b + 10.5;
+    if (res > 50.0) {
+        res = 50.0;
+    }
+    Print(res);
+};
 
 Hello, world!
-x=2.0;
-x=-5.0;
-b1=b1&&b2;
-b1=b1||b2;
-b2=!b1;
-b1=b1&&b2||b1&&!b2;
-y=2+3+x*y;
-abc(a,2,c+b);
+
+    x = 100;
+    y = -5.5;
+    hp of p1 = 100;
+    
+    flag = T;
+    flag = (x > 50) && (y < 0) || !F;
+
+    if (flag) {
+        Print("Flag is true");
+        x = x + 1;
+    } else {
+        Print("Flag is false");
+    }
+
+    while (x > 90) {
+        x = x - 1;
+        Print(x);
+    }
+
+    power of p1 = 20.5;
+    attack of p1(10);
+    
+    calculate(y, power of p1);
+
+    Print("Done");
+
 Goodbye, world!

@@ -5,10 +5,12 @@
 }
 %left OR
 %left AND
-%left '!'
+%left '<' '>' LEQ GEQ EQ NEQ
 %left '+' '-' 
 %left '*' '/' '%'
 %left '^'
+%left '!'
+%left OF
 
 %{
 #include <iostream>
@@ -32,8 +34,7 @@ int errorCount = 0;
 
 //%destructor { delete $$; } <Str> 
 
-%token  BEGIN_MAIN END_MAIN ASSIGN 
-%token LEQ GEQ EQ NEQ
+%token  BEGIN_MAIN END_MAIN ASSIGN AS SUMMON ARISE
 %token<Int> NAT ZAT
 %token<Bool> BOOL
 %token<Float> QAT
@@ -44,29 +45,59 @@ int errorCount = 0;
 %token PRINT
 
 %type<Float> exp
-%type<Bool> bexp
 %type<Char> ch
 %type<Str> stexp
+%type<Str> TYPENAME
 %start progr
 %%
 progr :  declarations main {if (errorCount == 0) cout<< "The program is correct!" << endl;}
       ;
+declarations : //includes class declarations so that you cant make a class inside another class
+                 | declarations decl
+                 | declarations classdecl
+                 | declarations fundecl
+                 ;
 
-declarations : decl           
-	      |  declarations decl    
-	      ;
+TYPENAME : TYPE { $$ = $1; }
+          | ID { $$ = $1; }
+          ;
 
-decl       :  TYPE ID ';' { 
+decl       :  SUMMON ID AS TYPENAME ';' { 
                               if(!current->existsId($2)) {
-                                    current->addVar($1,$2);
-                                    delete $1;
+                                    current->addVar($4,$2);
+                                    delete $4;
                                     delete $2;
                               } else {
                                    errorCount++; 
                                    yyerror("Variable already defined");
+                                   delete $4; delete $2;
                               }
                           }
-              | TYPE ID  '(' list_param ')' ';'
+               | SUMMON ID AS TYPENAME ',' decl { 
+                              if(!current->existsId($2)) {
+                                    current->addVar($4,$2);
+                                    delete $4;
+                                    delete $2;
+                              } else {
+                                   errorCount++; 
+                                   yyerror("Variable already defined");
+                                   delete $4; delete $2;
+                              }
+                          }
+          ;    
+fundecl : SUMMON ID AS TYPENAME  '(' list_param ')' ';'
+              | SUMMON ID AS TYPENAME  '(' list_param ')' '{' insidefunc '}' ';'
+          ;
+insidefunc : 
+            | insidefunc decl
+            | insidefunc statement
+          ;
+classdecl : ARISE ID '{' class_body '}' ';'
+          ;
+
+class_body : 
+           | class_body decl
+           | class_body fundecl
            ;
 
 exp :  exp '+' exp  {$$ = $1 + $3; }
@@ -80,40 +111,34 @@ exp :  exp '+' exp  {$$ = $1 + $3; }
   |  QAT { $$ = $1; }
   |  NAT { $$ = $1; }
   |  ZAT { $$ = $1; }
-  |  CHAR { $$ = (int)$1; }
-  |  ID 
+  |  ch { $$ = (int)$1; }
+  |  ID { $$ = 0; delete $1; }
+  |  ID OF ID { $$ = 0; delete $1; delete $3; }
+  |  exp AND exp { $$ = ($1 != 0 && $3 != 0) ? 1.0 : 0.0; }
+  |  exp OR exp { $$ = ($1 != 0 || $3 != 0) ? 1.0 : 0.0; }
+  |  '!' exp { $$ = ($2 == 0) ? 1.0 : 0.0; }
+  |  exp '<' exp { $$ = ($1 < $3) ? 1.0 : 0.0; }
+  |  exp '>' exp { $$ = ($1 > $3) ? 1.0 : 0.0; }
+  |  exp LEQ exp { $$ = ($1 <= $3) ? 1.0 : 0.0; }
+  |  exp GEQ exp { $$ = ($1 >= $3) ? 1.0 : 0.0; }
+  |  exp EQ exp { $$ = ($1 == $3) ? 1.0 : 0.0; }
+  |  exp NEQ exp { $$ = ($1 != $3) ? 1.0 : 0.0; }
+  |  BOOL { $$ = $1 ? 1.0 : 0.0; }
   ;
 
-bexp:  bexp AND bexp { $$ = ($1 != 0 && $3 != 0) ? true : false; }
- |  bexp OR bexp { $$ = ($1 != 0 || $3 != 0) ? true : false; }
- |  '!' bexp { $$ = ($2 == 0) ? true : false; }
- |  '(' bexp ')' { $$ = $2; }
- |  exp '<' exp { $$ = ($1 < $3) ? true : false; }
- |  exp '>' exp { $$ = ($1 > $3) ? true : false; }
- |  exp LEQ exp { $$ = ($1 <= $3) ? true : false; }
- |  exp GEQ exp { $$ = ($1 >= $3) ? true : false; }
- |  exp EQ exp { $$ = ($1 == $3) ? true : false; }
- |  exp NEQ exp { $$ = ($1 != $3) ? true : false; }
- |  BOOL { $$ = $1 ? true : false; }
- |  exp { $$ = $1; }
- ;
+ch : CHAR { $$ = $1; }
+   ;
 
  stexp : STRING { $$ = $1; }
      | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
-     | stexp '+' STRING { $$ = new string(*$1 + *$3); delete $1; delete $3; }
-     | STRING '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
-     | stexp '+' ch { $$ = new string(*$1 + string(1,$3)); delete $1; }
-     | ch '+' stexp { $$ = new string(string(1,$1) + *$2); delete $2; }
-     | ch '+' STRING { $$ = new string(string(1,$1) + *$3); delete $3; }
-     | STRING '+' ch { $$ = new string(*$1 + string(1,$3)); delete $1; }
-     | ID { $$ = new string("undefined"); /* Placeholder: needs symbol table lookup */ }
      ;
 
-list_param : param
+list_param : 
+            |param
             | list_param ','  param 
             ;
             
-param : TYPE ID 
+param : TYPENAME ID 
       ; 
       
 
@@ -132,9 +157,12 @@ statement
     ;
 
 simple_statement
-    : ID ASSIGN bexp
+    : ID ASSIGN exp
     | ID '(' call_list ')'
+    | ID OF ID ASSIGN exp
+    | ID OF ID '(' call_list ')'
     | PRINT '(' exp ')'
+    | PRINT '(' stexp ')'
     ;
 
 block
@@ -142,17 +170,18 @@ block
     ;
 
 if_statement
-    : IF '(' bexp ')' block
-    | IF '(' bexp ')' block ELSE block
+    : IF '(' exp ')' block
+    | IF '(' exp ')' block ELSE block
     ;
 
 while_statement
-    : WHILE '(' bexp ')' block
+    : WHILE '(' exp ')' block
     ;
 
 
-call_list : bexp
-           | call_list ',' bexp
+call_list : 
+           |exp
+           | call_list ',' exp
            ;
 %%
 void yyerror(const char * s){
