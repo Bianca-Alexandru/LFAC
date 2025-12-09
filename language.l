@@ -11,6 +11,8 @@
 "Goodbye, world!" {return END_MAIN;}
 "=" {return ASSIGN;}
 
+"Print"     return PRINT;
+
 "T" {yylval.Bool = true; return BOOL;}
 "F" {yylval.Bool = false; return BOOL;}
 

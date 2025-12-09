@@ -40,6 +40,9 @@ int errorCount = 0;
 %token<Str> ID TYPE STRING
 %token<Char> CHAR
 
+%token IF ELSE WHILE
+%token PRINT
+
 %type<Float> exp
 %type<Bool> bexp
 %type<Char> ch
@@ -117,15 +120,37 @@ param : TYPE ID
 main : BEGIN_MAIN list END_MAIN  
      ;
      
+list
+    : 
+    | list statement
+    ;
 
-list :  statement ';' 
-     | list statement ';'
-     ;
+statement
+    : simple_statement ';'
+    | if_statement
+    | while_statement
+    ;
 
-statement: ID ASSIGN bexp 		 
-         | ID '(' call_list ')'
-         ;
-        
+simple_statement
+    : ID ASSIGN bexp
+    | ID '(' call_list ')'
+    | PRINT '(' exp ')'
+    ;
+
+block
+    : '{' list '}'
+    ;
+
+if_statement
+    : IF '(' bexp ')' block
+    | IF '(' bexp ')' block ELSE block
+    ;
+
+while_statement
+    : WHILE '(' bexp ')' block
+    ;
+
+
 call_list : bexp
            | call_list ',' bexp
            ;
