@@ -1,52 +1,55 @@
+summon z as float;
+summon c as float;
+summon m as float;
+summon i as com;
 summon x as int;
-summon y as float;
-summon flag as bool;
 
-arise Player {
-    summon hp as int;
-    summon power as float;
-    summon attack as void (int damage) {
-         hp = hp - damage;
-    };
+arise Pixel {
+summon r as float;
+summon ii as float;
 };
 
-summon p1 as Player;
+summon p as Pixel;
 
-summon calculate as float (float a, float b) {
-    summon res as float;
-    res = a * b + 10.5;
-    if (res > 50.0) {
-        res = 50.0;
+summon iterate as void (float limit) {
+c = 0.35 + 0.4i;
+z = 0.0 + 0.0i;
+
+x = 0;
+while (x < 10) {
+    z = (z + 0i) * (z + 0i) + (c + 0i);
+    
+    m = mag(z + 0i);
+    
+    if (m > limit) {
+        Print("Escaped to infinity");
+        x = 100; 
     }
-    Print(res);
+    
+    x = x + 1;
+}
+
+
 };
 
 Hello, world!
 
-    x = 100;
-    y = -5.5;
-    hp of p1 = 100;
-    
-    flag = T;
-    flag = (x > 50) && (y < 0) || !F;
+z = 5i;
+z = 3.0 + 4.0i;
 
-    if (flag) {
-        Print("Flag is true");
-        x = x + 1;
-    } else {
-        Print("Flag is false");
-    }
+z = 10 * 2.5i;
+z = (3+2i) / 2.0;
 
-    while (x > 90) {
-        x = x - 1;
-        Print(x);
-    }
+m = real(5 + 2i);
+m = imag(10i);
 
-    power of p1 = 20.5;
-    attack of p1(10);
-    
-    calculate(y, power of p1);
+r of p = real(z + 0i);
+i of p = imag(z + 0i);
 
-    Print("Done");
+Print("Magnitude is:");
+Print(mag(3+4i));
+
+iterate(2.0);
+
 
 Goodbye, world!

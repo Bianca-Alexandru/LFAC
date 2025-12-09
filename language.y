@@ -2,6 +2,11 @@
   #include <string>
   #include <cmath>
   using namespace std;
+
+  struct Complex {
+      float real;
+      float imag;
+  };
 }
 %left OR
 %left AND
@@ -30,6 +35,7 @@ int errorCount = 0;
      float Float;
      bool Bool;
      char Char;
+     struct Complex Comp;
 }
 
 //%destructor { delete $$; } <Str> 
@@ -38,8 +44,10 @@ int errorCount = 0;
 %token<Int> NAT ZAT
 %token<Bool> BOOL
 %token<Float> QAT
+%token<Float> CAT
 %token<Str> ID TYPE STRING
 %token<Char> CHAR
+%token MAG REAL IMAG 
 
 %token IF ELSE WHILE
 %token PRINT
@@ -48,6 +56,7 @@ int errorCount = 0;
 %type<Char> ch
 %type<Str> stexp
 %type<Str> TYPENAME
+%type<Comp> cexp
 %start progr
 %%
 progr :  declarations main {if (errorCount == 0) cout<< "The program is correct!" << endl;}
@@ -114,6 +123,9 @@ exp :  exp '+' exp  {$$ = $1 + $3; }
   |  ch { $$ = (int)$1; }
   |  ID { $$ = 0; delete $1; }
   |  ID OF ID { $$ = 0; delete $1; delete $3; }
+  | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
+  | REAL '(' cexp ')' { $$ = $3.real; }
+  | IMAG '(' cexp ')' { $$ = $3.imag; }
   |  exp AND exp { $$ = ($1 != 0 && $3 != 0) ? 1.0 : 0.0; }
   |  exp OR exp { $$ = ($1 != 0 || $3 != 0) ? 1.0 : 0.0; }
   |  '!' exp { $$ = ($2 == 0) ? 1.0 : 0.0; }
@@ -125,6 +137,28 @@ exp :  exp '+' exp  {$$ = $1 + $3; }
   |  exp NEQ exp { $$ = ($1 != $3) ? 1.0 : 0.0; }
   |  BOOL { $$ = $1 ? 1.0 : 0.0; }
   ;
+
+cexp : CAT { $$.real = 0; $$.imag = $1; } 
+     | cexp '+' cexp { $$.real = $1.real + $3.real; $$.imag = $1.imag + $3.imag; }
+     | cexp '-' cexp { $$.real = $1.real - $3.real; $$.imag = $1.imag - $3.imag; }
+     | cexp '*' cexp { 
+          $$.real = ($1.real * $3.real) - ($1.imag * $3.imag);
+          $$.imag = ($1.real * $3.imag) + ($1.imag * $3.real);
+     }
+     | cexp '/' cexp { 
+          float denom = ($3.real * $3.real) + ($3.imag * $3.imag);
+          $$.real = (($1.real * $3.real) + ($1.imag * $3.imag)) / denom;
+          $$.imag = (($1.imag * $3.real) - ($1.real * $3.imag)) / denom;
+     }
+     | exp '+' cexp  { $$.real = $1 + $3.real; $$.imag = $3.imag; }
+     | cexp '+' exp  { $$.real = $1.real + $3; $$.imag = $1.imag; }
+     | '(' cexp ')' { $$.real = $2.real; $$.imag = $2.imag; }
+     | exp '-' cexp  { $$.real = $1 - $3.real; $$.imag = -$3.imag; }
+     | cexp '-' exp  { $$.real = $1.real - $3; $$.imag = $1.imag; }
+     | cexp '*' exp { $$.real = $1.real * $3; $$.imag = $1.imag * $3; }
+     | exp '*' cexp { $$.real = $1 * $3.real; $$.imag = $1 * $3.imag; }
+     | cexp '/' exp { $$.real = $1.real / $3; $$.imag = $1.imag / $3; }
+     ;
 
 ch : CHAR { $$ = $1; }
    ;
@@ -158,6 +192,7 @@ statement
 
 simple_statement
     : ID ASSIGN exp
+    | ID ASSIGN cexp
     | ID '(' call_list ')'
     | ID OF ID ASSIGN exp
     | ID OF ID '(' call_list ')'

@@ -6,7 +6,7 @@
 %}
 %option noyywrap
 %%
-"int"|"float"|"char"|"string"|"bool" {yylval.Str = new std::string(yytext); return TYPE;}
+"int"|"float"|"char"|"string"|"bool"|"void"|"com" {yylval.Str = new std::string(yytext); return TYPE;}
 "Hello, world!" {return BEGIN_MAIN;}
 "Goodbye, world!" {return END_MAIN;}
 "summon" {return SUMMON;}
@@ -18,6 +18,10 @@
 "else" {return ELSE;}
 "while" {return WHILE;}
 "=" {return ASSIGN;}
+"mag"  {return MAG;}
+"real" {return REAL;}
+"imag" {return IMAG;}
+
 
 "T" {yylval.Bool = true; return BOOL;}
 "F" {yylval.Bool = false; return BOOL;}
@@ -32,6 +36,8 @@
 -?[0-9]+\.[0-9]+ {yylval.Float = atof(yytext); return QAT;}
 [0-9]+ {yylval.Int = atoi(yytext); return NAT;}
 -?[0-9]+ {yylval.Int = atoi(yytext); return ZAT;}
+
+-?([0-9]*\.[0-9]+|[0-9]+)"i" { yylval.Float = atof(yytext); return CAT; /*complex*/}
 
 '.'    { yylval.Char = yytext[1]; return CHAR; }
 \"[^"]*\"  { yylval.Str = new std::string(yytext+1, yyleng-2); return STRING; }
