@@ -54,6 +54,7 @@ int errorCount = 0;
 
 %type<Float> exp
 %type<Char> ch
+%type<Bool> bexp
 %type<Str> stexp
 %type<Str> TYPENAME
 %type<Comp> cexp
@@ -110,33 +111,35 @@ class_body :
            ;
 
 exp :  exp '+' exp  {$$ = $1 + $3; }
-  |  exp '-' exp {$$ = $1 - $3;}
-  |  exp '*' exp  {$$ = $1 * $3;}
-  |  exp '/' exp {$$ = $1 / $3;}
-  |  exp '%' exp {$$ = (int)$1 % (int)$3;}
-  |  exp '^' exp {$$ = pow($1,$3);}
-  |  '(' exp ')' { $$ = $2; }
-  |  exp'!' {$$ = 1; for(int i=1;i<=$1;i++) $$ *= i;}
-  |  QAT { $$ = $1; }
-  |  NAT { $$ = $1; }
-  |  ZAT { $$ = $1; }
-  |  ch { $$ = (int)$1; }
-  |  ID { $$ = 0; delete $1; }
-  |  ID OF ID { $$ = 0; delete $1; delete $3; }
-  | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
-  | REAL '(' cexp ')' { $$ = $3.real; }
-  | IMAG '(' cexp ')' { $$ = $3.imag; }
-  |  exp AND exp { $$ = ($1 != 0 && $3 != 0) ? 1.0 : 0.0; }
-  |  exp OR exp { $$ = ($1 != 0 || $3 != 0) ? 1.0 : 0.0; }
-  |  '!' exp { $$ = ($2 == 0) ? 1.0 : 0.0; }
-  |  exp '<' exp { $$ = ($1 < $3) ? 1.0 : 0.0; }
-  |  exp '>' exp { $$ = ($1 > $3) ? 1.0 : 0.0; }
-  |  exp LEQ exp { $$ = ($1 <= $3) ? 1.0 : 0.0; }
-  |  exp GEQ exp { $$ = ($1 >= $3) ? 1.0 : 0.0; }
-  |  exp EQ exp { $$ = ($1 == $3) ? 1.0 : 0.0; }
-  |  exp NEQ exp { $$ = ($1 != $3) ? 1.0 : 0.0; }
-  |  BOOL { $$ = $1 ? 1.0 : 0.0; }
-  ;
+     |  exp '-' exp {$$ = $1 - $3;}
+     |  exp '*' exp  {$$ = $1 * $3;}
+     |  exp '/' exp {$$ = $1 / $3;}
+     |  exp '%' exp {$$ = (int)$1 % (int)$3;}
+     |  exp '^' exp {$$ = pow($1,$3);}
+     |  '(' exp ')' { $$ = $2; }
+     |  exp'!' {$$ = 1; for(int i=1;i<=$1;i++) $$ *= i;}
+     |  QAT { $$ = $1; }
+     |  NAT { $$ = $1; }
+     |  ZAT { $$ = $1; }
+     |  ch { $$ = (int)$1; }
+     |  ID { $$ = 0; delete $1; }
+     |  ID OF ID { $$ = 0; delete $1; delete $3; }
+     | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
+     | REAL '(' cexp ')' { $$ = $3.real; }
+     | IMAG '(' cexp ')' { $$ = $3.imag; }
+     ;
+
+bexp :  BOOL { $$ = $1; }
+     |  bexp AND bexp { $$ = $1 && $3; }
+     |  bexp OR bexp { $$ = $1 || $3; }
+     |  '!' bexp { $$ = !$2; }
+     |  exp '<' exp { $$ = $1 < $3; }
+     |  exp '>' exp { $$ = $1 > $3; }
+     |  exp LEQ exp { $$ = $1 <= $3; }
+     |  exp GEQ exp { $$ = $1 >= $3; }
+     |  exp EQ exp { $$ = $1 == $3; }
+     |  exp NEQ exp { $$ = $1 != $3; }
+     ;
 
 cexp : CAT { $$.real = 0; $$.imag = $1; } 
      | cexp '+' cexp { $$.real = $1.real + $3.real; $$.imag = $1.imag + $3.imag; }
@@ -193,6 +196,7 @@ statement
 simple_statement
     : ID ASSIGN exp
     | ID ASSIGN cexp
+    | ID ASSIGN bexp //union?
     | ID '(' call_list ')'
     | ID OF ID ASSIGN exp
     | ID OF ID '(' call_list ')'
@@ -205,12 +209,12 @@ block
     ;
 
 if_statement
-    : IF '(' exp ')' block
-    | IF '(' exp ')' block ELSE block
+    : IF '(' bexp ')' block
+    | IF '(' bexp ')' block ELSE block
     ;
 
 while_statement
-    : WHILE '(' exp ')' block
+    : WHILE '(' bexp ')' block
     ;
 
 
@@ -227,6 +231,7 @@ int main(int argc, char** argv){
      yyin=fopen(argv[1],"r");
      current = new SymTable("global");
      yyparse();
+     //deallocate memory symtable vector
      cout << "Variables:" <<endl;
      current->printVars();
      delete current;
