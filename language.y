@@ -153,7 +153,11 @@ fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
               | SUMMON ANYID AS TYPENAME  '(' list_param ')' {
                     if(!current->existsId($2)) {
                          string* s = new string("func");
-                         current->addSym($4,$2, s);
+                         vector<string> paramTypes;
+                         for(auto p : *$6) {
+                             paramTypes.push_back(p->type);
+                         }
+                         current->addSym($4,$2, s, paramTypes);
                          delete $4; delete $2; delete s;
                     } else {
                          errorCount++; 
@@ -281,7 +285,7 @@ list_param : //empty
           }
             ;
             
-param : TYPENAME ID 
+param : TYPENAME ANYID 
      {
          $$ = new Param();
          $$->type = *$1;
@@ -351,6 +355,7 @@ int main(int argc, char** argv){
      symTables.push_back(current); //new here
      yyparse();
      //deallocate memory symtable vector
+     freopen("tables.txt", "w", stdout);
      cout << "Variables:" <<endl;
      //current->printVars(); change here
      //delete current;

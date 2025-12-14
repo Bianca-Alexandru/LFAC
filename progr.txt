@@ -8,6 +8,7 @@ summon b1 as bool, summon b2 as bool;
 arise Pixel {
 summon r as float;
 summon ii as float;
+summon draw as com (Pixel p1, Pixel p2);
 };
 
 summon p as Pixel;
@@ -30,6 +31,8 @@ summon iterate as void (float limit) {
         x = x + 1;
     }
 };
+
+summon manyparams as com (int a, int b, int c, float ab, float bc, com xy, com xz, string abcxz);
 
 Hello, world!
 
