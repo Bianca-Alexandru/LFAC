@@ -1,6 +1,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -8,9 +9,11 @@ class IdInfo {
     public:
     string type;
     string name;
+    string category; // var /func / param / class
+    vector<string> params; // for func only
    
     IdInfo() {}
-    IdInfo(string* type, string* name) : type(*type), name(*name) {}
+    IdInfo(string* type, string* name, string* category) : type(*type), name(*name), category(*category) {}
 };
 
 class SymTable {
@@ -22,6 +25,7 @@ class SymTable {
     bool existsId(string* s);
     void addVar(string* type, string* name );
     void printVars();
+    SymTable* getParent() { return parent; }
     ~SymTable();
 };
 

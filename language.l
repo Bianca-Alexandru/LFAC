@@ -39,7 +39,6 @@
 
 -?([0-9]*\.[0-9]+|[0-9]+)"i" { yylval.Float = atof(yytext); return CAT; /*complex*/}
 
-'.'    { yylval.Char = yytext[1]; return CHAR; }
 \"[^"]*\"  { yylval.Str = new std::string(yytext+1, yyleng-2); return STRING; }
 
 [a-zA-Z][a-zA-Z0-9]* {yylval.Str = new std::string(yytext); return ID;}

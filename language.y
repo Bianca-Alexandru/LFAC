@@ -19,6 +19,7 @@
 
 %{
 #include <iostream>
+#include <vector>
 #include "SymTable.h"
 extern FILE* yyin;
 extern char* yytext;
@@ -27,6 +28,7 @@ extern int yylex();
 void yyerror(const char * s);
 class SymTable* current;
 int errorCount = 0;
+vector<SymTable*> symTables;
 %}
 
 %union {
@@ -45,15 +47,13 @@ int errorCount = 0;
 %token<Bool> BOOL
 %token<Float> QAT
 %token<Float> CAT
-%token<Str> ID TYPE STRING
-%token<Char> CHAR
+%token<Str> ID TYPE STRING ID_BOOL ID_COM ID_STR
 %token MAG REAL IMAG 
 
 %token IF ELSE WHILE
 %token PRINT
 
 %type<Float> exp
-%type<Char> ch
 %type<Bool> bexp
 %type<Str> stexp
 %type<Str> TYPENAME
@@ -95,14 +95,26 @@ decl       :  SUMMON ID AS TYPENAME ';' {
                               }
                           }
           ;    
+newscopefunc:{
+                    SymTable* newScope = new SymTable("func", current);
+                    symTables.push_back(newScope);
+                    current = newScope;
+                 }
+           ;
+newscopeclass:{
+                    SymTable* newScope = new SymTable("class", current);
+                    symTables.push_back(newScope);
+                    current = newScope;
+                 }
+           ;
 fundecl : SUMMON ID AS TYPENAME  '(' list_param ')' ';'
-              | SUMMON ID AS TYPENAME  '(' list_param ')' '{' insidefunc '}' ';'
+              | SUMMON ID AS TYPENAME  '(' list_param ')' newscopefunc '{' insidefunc '}' {current = current->getParent();}';'
           ;
 insidefunc : 
             | insidefunc decl
             | insidefunc statement
           ;
-classdecl : ARISE ID '{' class_body '}' ';'
+classdecl : ARISE ID newscopeclass'{' class_body '}' ';'
           ;
 
 class_body : 
@@ -121,7 +133,6 @@ exp :  exp '+' exp  {$$ = $1 + $3; }
      |  QAT { $$ = $1; }
      |  NAT { $$ = $1; }
      |  ZAT { $$ = $1; }
-     |  ch { $$ = (int)$1; }
      |  ID { $$ = 0; delete $1; }
      |  ID OF ID { $$ = 0; delete $1; delete $3; }
      | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
@@ -163,10 +174,7 @@ cexp : CAT { $$.real = 0; $$.imag = $1; }
      | cexp '/' exp { $$.real = $1.real / $3; $$.imag = $1.imag / $3; }
      ;
 
-ch : CHAR { $$ = $1; }
-   ;
-
- stexp : STRING { $$ = $1; }
+stexp : STRING { $$ = $1; }
      | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
      ;
 
@@ -230,9 +238,15 @@ void yyerror(const char * s){
 int main(int argc, char** argv){
      yyin=fopen(argv[1],"r");
      current = new SymTable("global");
+
+     symTables.push_back(current); //new here
      yyparse();
      //deallocate memory symtable vector
      cout << "Variables:" <<endl;
-     current->printVars();
-     delete current;
+     //current->printVars(); change here
+     //delete current;
+     for(auto table : symTables){
+         table->printVars();
+         delete table;
+     }
 }
