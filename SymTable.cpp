@@ -16,6 +16,11 @@ void SymTable::printVars() {
         cout << "name: " << v.first << " type:" << v.second.type << endl; 
      }
 }
+string SymTable::getType(string* name) {
+    if (ids.count(*name)) return ids[*name].type;
+    if (parent) return parent->getType(name);
+    return "";
+}
 
 SymTable::~SymTable() {
     ids.clear();

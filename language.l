@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include "language.tab.h"
 #include <string>
+#include "SymTable.h"
+extern SymTable* current;
 %}
 %option noyywrap
 %%
@@ -41,7 +43,23 @@
 
 \"[^"]*\"  { yylval.Str = new std::string(yytext+1, yyleng-2); return STRING; }
 
-[a-zA-Z][a-zA-Z0-9]* {yylval.Str = new std::string(yytext); return ID;}
+[a-zA-Z][a-zA-Z0-9]* {
+    //separate to fix reduce reduce conflicts for id case in exp, bexp, cexp etc
+    string name = yytext;
+    if(current && current->existsId(&name)) {
+        string type = current->getType(&name);
+        yylval.Str = new std::string(type);
+
+        if (type == "bool") return ID_BOOL;
+        else if (type == "int" ) return ID_INT;
+        else if (type == "float") return ID_FLOAT;
+        else if (type == "com") return ID_COM;
+        else if (type == "string") return ID_STR;
+        return ID;
+    }
+    yylval.Str = new std::string(yytext);
+    return ID;
+}
 
 [ \t] ;
 \n {yylineno++;}

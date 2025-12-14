@@ -54,7 +54,7 @@ vector<SymTable*> symTables;
 %token<Bool> BOOL
 %token<Float> QAT
 %token<Float> CAT
-%token<Str> ID TYPE STRING ID_BOOL ID_COM ID_STR
+%token<Str> ID TYPE STRING ID_BOOL ID_COM ID_STR ID_INT ID_FLOAT
 %token MAG REAL IMAG 
 
 %token IF ELSE WHILE
@@ -190,36 +190,38 @@ class_body :
            ;
 
 exp :  exp '+' exp  {$$ = $1 + $3; }
-     |  exp '-' exp {$$ = $1 - $3;}
-     |  exp '*' exp  {$$ = $1 * $3;}
-     |  exp '/' exp {$$ = $1 / $3;}
-     |  exp '%' exp {$$ = (int)$1 % (int)$3;}
-     |  exp '^' exp {$$ = pow($1,$3);}
-     |  '(' exp ')' { $$ = $2; }
-     |  exp'!' {$$ = 1; for(int i=1;i<=$1;i++) $$ *= i;}
-     |  QAT { $$ = $1; }
-     |  NAT { $$ = $1; }
-     |  ZAT { $$ = $1; }
-     |  ID { $$ = 0; delete $1; }
-     |  ID OF ID { $$ = 0; delete $1; delete $3; }
+     | exp '-' exp {$$ = $1 - $3;}
+     | exp '*' exp  {$$ = $1 * $3;}
+     | exp '/' exp {$$ = $1 / $3;}
+     | exp '%' exp {$$ = (int)$1 % (int)$3;}
+     | exp '^' exp {$$ = pow($1,$3);}
+     | '(' exp ')' { $$ = $2; }
+     | exp'!' {$$ = 1; for(int i=1;i<=$1;i++) $$ *= i;}
+     | QAT { $$ = $1; }
+     | NAT { $$ = $1; }
+     | ZAT { $$ = $1; }
+     | ID { $$ = 0; delete $1; }
+     | ID OF ID { $$ = 0; delete $1; delete $3; }
      | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
      | REAL '(' cexp ')' { $$ = $3.real; }
      | IMAG '(' cexp ')' { $$ = $3.imag; }
      ;
 
-bexp :  BOOL { $$ = $1; }
-     |  bexp AND bexp { $$ = $1 && $3; }
-     |  bexp OR bexp { $$ = $1 || $3; }
-     |  '!' bexp { $$ = !$2; }
-     |  exp '<' exp { $$ = $1 < $3; }
-     |  exp '>' exp { $$ = $1 > $3; }
-     |  exp LEQ exp { $$ = $1 <= $3; }
-     |  exp GEQ exp { $$ = $1 >= $3; }
-     |  exp EQ exp { $$ = $1 == $3; }
-     |  exp NEQ exp { $$ = $1 != $3; }
+bexp : BOOL { $$ = $1; }
+     | ID_BOOL {$$ = false; delete $1; } //placeholder
+     | bexp AND bexp { $$ = $1 && $3; }
+     | bexp OR bexp { $$ = $1 || $3; }
+     | '!' bexp { $$ = !$2; }
+     | exp '<' exp { $$ = $1 < $3; }
+     | exp '>' exp { $$ = $1 > $3; }
+     | exp LEQ exp { $$ = $1 <= $3; }
+     | exp GEQ exp { $$ = $1 >= $3; }
+     | exp EQ exp { $$ = $1 == $3; }
+     | exp NEQ exp { $$ = $1 != $3; }
      ;
 
 cexp : CAT { $$.real = 0; $$.imag = $1; } 
+     | ID_COM { $$.real = 0; $$.imag = 0; delete $1; } //placeholder
      | cexp '+' cexp { $$.real = $1.real + $3.real; $$.imag = $1.imag + $3.imag; }
      | cexp '-' cexp { $$.real = $1.real - $3.real; $$.imag = $1.imag - $3.imag; }
      | cexp '*' cexp { 
@@ -242,6 +244,7 @@ cexp : CAT { $$.real = 0; $$.imag = $1; }
      ;
 
 stexp : STRING { $$ = $1; }
+     | ID_STR { $$ = new string(""); delete $1; } //placeholder
      | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
      ;
 
