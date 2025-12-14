@@ -35,11 +35,17 @@ extern SymTable* current;
 "==" {return EQ;}
 "=/=" {return NEQ;}
 
--?[0-9]+\.[0-9]+ {yylval.Float = atof(yytext); return QAT;}
-[0-9]+ {yylval.Int = atoi(yytext); return NAT;}
--?[0-9]+ {yylval.Int = atoi(yytext); return ZAT;}
-
--?([0-9]*\.[0-9]+|[0-9]+)"i" { yylval.Float = atof(yytext); return CAT; /*complex*/}
+-?([0-9]*\.[0-9]+|[0-9]+)[ \t]*[+-][ \t]*([0-9]*\.[0-9]+|[0-9]+)"i" { 
+    float rval, ival;
+    char op;
+    sscanf(yytext, "%f%*[ \t]%c%*[ \t]%f", &rval, &op, &ival);
+    
+    yylval.Comp.real = rval;
+    yylval.Comp.imag = (op == '-') ? -ival : ival;
+    return CAT; 
+}
+(0|[1-9][0-9]*)\.[0-9]+ {yylval.Float = atof(yytext); return QAT;}
+0|[1-9][0-9]* {yylval.Int = atoi(yytext); return ZAT;}
 
 \"[^"]*\"  { yylval.Str = new std::string(yytext+1, yyleng-2); return STRING; }
 

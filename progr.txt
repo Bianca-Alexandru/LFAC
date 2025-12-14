@@ -1,8 +1,9 @@
-summon z as float;
-summon c as float;
+summon z as com;
+summon c as com;
 summon m as float;
 summon i as com;
 summon x as int;
+summon b1 as bool, summon b2 as bool;
 
 arise Pixel {
 summon r as float;
@@ -17,9 +18,9 @@ summon iterate as void (float limit) {
 
     x = 0;
     while (x < 10) {
-        z = z * z + (c + 2i);
+        z = z * z + (c + 5+2i);
         
-        m = mag(z + 2i);
+        m = mag(z + 0+2i);
         
         if (m > limit) {
             Print("m is too big");
@@ -32,21 +33,20 @@ summon iterate as void (float limit) {
 
 Hello, world!
 
-x= 5 < 4;
-x= c1< c2;
-x = !T;
-x= b1 && b2;
-z = 5i;
+b1= 5 < 4;
+b2= b1 && b2;
+b1 = !T;
+z = 0.00+5i;
 z = 3.0 + 4.0i;
 
-z = 10 * 2.5i;
-z = (3+2i) / 2.0;
+z = 10 +0i * 0+ 2.5i;
+z = (3+2i) / 2.0 +0i;
 
 m = real(5 + 2i);
-m = imag(10i);
+m = imag(0+10i);
 
-r of p = real(z + 0i);
-i of p = imag(z + 0i);
+r of p = real(z );
+ii of p = imag(z );
 
 Print("Magnitude is:");
 Print(mag(3+4i));

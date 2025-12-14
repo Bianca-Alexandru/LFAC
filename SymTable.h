@@ -23,7 +23,7 @@ class SymTable {
     public:
     SymTable(const char* name, SymTable* parent = NULL) :  name(name), parent(parent) {}
     bool existsId(string* s);
-    void addSym(string* type, string* name, string* category);
+    void addSym(string* type, string* name, string* category, vector<string> params = {});
     void printVars();
     SymTable* getParent() { return parent; }
     string getType(string* name);

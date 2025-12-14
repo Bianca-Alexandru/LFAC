@@ -1,14 +1,17 @@
 #include "SymTable.h"
 using namespace std;
 
-void SymTable::addSym(string* type, string*name, string* category) {
+void SymTable::addSym(string* type, string*name, string* category, vector<string> params) {
     IdInfo var(type, name, category);
+    var.params = params;
     ids[*name] = var; 
 }
 
 
 bool SymTable::existsId(string* var) {
-    return ids.count(*var) > 0;  
+    if(ids.count(*var)) return true;
+    if (parent) return parent->existsId(var);
+    return false;
 }
 
 void SymTable::printVars() {

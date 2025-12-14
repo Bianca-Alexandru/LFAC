@@ -13,6 +13,8 @@
       string name;
   };
 }
+%define parse.error verbose
+
 %left OR
 %left AND
 %left '<' '>' LEQ GEQ EQ NEQ
@@ -21,6 +23,7 @@
 %left '^'
 %left '!'
 %left OF
+%right UMINUS
 
 %{
 #include <iostream>
@@ -50,7 +53,7 @@ vector<SymTable*> symTables;
 //%destructor { delete $$; } <Str> 
 
 %token  BEGIN_MAIN END_MAIN ASSIGN AS SUMMON ARISE
-%token<Int> NAT ZAT
+%token<Int> ZAT
 %token<Bool> BOOL
 %token<Float> QAT
 %token<Float> CAT
@@ -67,6 +70,7 @@ vector<SymTable*> symTables;
 %type<Comp> cexp
 %type<Param> param
 %type<ParamList> list_param
+%type<Str> ANYID
 %start progr
 %%
 progr :  declarations main {if (errorCount == 0) cout<< "The program is correct!" << endl;}
@@ -81,7 +85,15 @@ TYPENAME : TYPE { $$ = $1; }
           | ID { $$ = $1; }
           ;
 
-decl       :  SUMMON ID AS TYPENAME ';' { 
+ANYID : ID       { $$ = $1; }
+      | ID_INT   { $$ = $1; }
+      | ID_FLOAT { $$ = $1; }
+      | ID_BOOL  { $$ = $1; }
+      | ID_COM   { $$ = $1; }
+      | ID_STR   { $$ = $1; }
+      ;
+
+decl       :  SUMMON ANYID AS TYPENAME ';' { 
                               if(!current->existsId($2)) {
                                    string* s = new string("var");
                                     current->addSym($4,$2, s);
@@ -92,7 +104,7 @@ decl       :  SUMMON ID AS TYPENAME ';' {
                                    delete $4; delete $2;
                               }
                           }
-               | SUMMON ID AS TYPENAME ',' decl { 
+               | SUMMON ANYID AS TYPENAME ',' decl { 
                               if(!current->existsId($2)) {
                                     current->addSym($4,$2, new string("var"));
                                     delete $4;
@@ -117,10 +129,14 @@ newscopeclass:{
                  }
            ;
 
-fundecl : SUMMON ID AS TYPENAME  '(' list_param ')'{
+fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
                     if(!current->existsId($2)) {
                          string* s = new string("func");
-                         current->addSym($4,$2, s);
+                         vector<string> paramTypes;
+                         for(auto p : *$6) {
+                             paramTypes.push_back(p->type);
+                         }
+                         current->addSym($4,$2, s, paramTypes);
                          delete $4; delete $2; delete s;
                     } else {
                          errorCount++; 
@@ -134,7 +150,7 @@ fundecl : SUMMON ID AS TYPENAME  '(' list_param ')'{
           } ';'
           //above is simple func definition without body
           //below is func def with body and add params in scope
-              | SUMMON ID AS TYPENAME  '(' list_param ')' {
+              | SUMMON ANYID AS TYPENAME  '(' list_param ')' {
                     if(!current->existsId($2)) {
                          string* s = new string("func");
                          current->addSym($4,$2, s);
@@ -189,7 +205,9 @@ class_body :
            | class_body fundecl
            ;
 
-exp :  exp '+' exp  {$$ = $1 + $3; }
+exp :  exp '+' exp  {//NOT relevant WILL need to change later into smth like $$ = new ASTNode("+", $1, $3);
+                    //not necessary to delete rn but will be deleted later for part4 
+     $$ = $1 + $3; }
      | exp '-' exp {$$ = $1 - $3;}
      | exp '*' exp  {$$ = $1 * $3;}
      | exp '/' exp {$$ = $1 / $3;}
@@ -197,11 +215,13 @@ exp :  exp '+' exp  {$$ = $1 + $3; }
      | exp '^' exp {$$ = pow($1,$3);}
      | '(' exp ')' { $$ = $2; }
      | exp'!' {$$ = 1; for(int i=1;i<=$1;i++) $$ *= i;}
+     | '-' exp %prec UMINUS { $$ = -$2; }
      | QAT { $$ = $1; }
-     | NAT { $$ = $1; }
      | ZAT { $$ = $1; }
-     | ID { $$ = 0; delete $1; }
-     | ID OF ID { $$ = 0; delete $1; delete $3; }
+     | ID_INT OF ID { $$ = 0; delete $1; delete $3; } //placeholder
+     | ID_FLOAT OF ID { $$ = 0; delete $1; delete $3; } //placeholder
+     | ID_INT { $$ = 0; delete $1; } //placeholder
+     | ID_FLOAT { $$ = 0; delete $1; } //placeholder
      | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
      | REAL '(' cexp ')' { $$ = $3.real; }
      | IMAG '(' cexp ')' { $$ = $3.imag; }
@@ -209,6 +229,7 @@ exp :  exp '+' exp  {$$ = $1 + $3; }
 
 bexp : BOOL { $$ = $1; }
      | ID_BOOL {$$ = false; delete $1; } //placeholder
+     | ID_BOOL OF ID { $$ = false; delete $1; delete $3; }
      | bexp AND bexp { $$ = $1 && $3; }
      | bexp OR bexp { $$ = $1 || $3; }
      | '!' bexp { $$ = !$2; }
@@ -222,9 +243,11 @@ bexp : BOOL { $$ = $1; }
 
 cexp : CAT { $$.real = 0; $$.imag = $1; } 
      | ID_COM { $$.real = 0; $$.imag = 0; delete $1; } //placeholder
+     | ID_COM OF ID { $$.real = 0; $$.imag = 0; delete $1; delete $3; }
      | cexp '+' cexp { $$.real = $1.real + $3.real; $$.imag = $1.imag + $3.imag; }
      | cexp '-' cexp { $$.real = $1.real - $3.real; $$.imag = $1.imag - $3.imag; }
-     | cexp '*' cexp { 
+     | cexp '*' cexp { //DOES NOT NEED  () 
+          // 10+0i * 2+3i is accepted by this language as (10+0i)*(2+3i)
           $$.real = ($1.real * $3.real) - ($1.imag * $3.imag);
           $$.imag = ($1.real * $3.imag) + ($1.imag * $3.real);
      }
@@ -233,18 +256,12 @@ cexp : CAT { $$.real = 0; $$.imag = $1; }
           $$.real = (($1.real * $3.real) + ($1.imag * $3.imag)) / denom;
           $$.imag = (($1.imag * $3.real) - ($1.real * $3.imag)) / denom;
      }
-     | exp '+' cexp  { $$.real = $1 + $3.real; $$.imag = $3.imag; }
-     | cexp '+' exp  { $$.real = $1.real + $3; $$.imag = $1.imag; }
      | '(' cexp ')' { $$.real = $2.real; $$.imag = $2.imag; }
-     | exp '-' cexp  { $$.real = $1 - $3.real; $$.imag = -$3.imag; }
-     | cexp '-' exp  { $$.real = $1.real - $3; $$.imag = $1.imag; }
-     | cexp '*' exp { $$.real = $1.real * $3; $$.imag = $1.imag * $3; }
-     | exp '*' cexp { $$.real = $1 * $3.real; $$.imag = $1 * $3.imag; }
-     | cexp '/' exp { $$.real = $1.real / $3; $$.imag = $1.imag / $3; }
      ;
 
 stexp : STRING { $$ = $1; }
      | ID_STR { $$ = new string(""); delete $1; } //placeholder
+     | ID_STR OF ID { $$ = new string(""); delete $1; delete $3; }
      | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
      ;
 
@@ -288,15 +305,21 @@ statement
     ;
 
 simple_statement
-    : ID ASSIGN exp
+    : ID_INT ASSIGN exp
+    | ID_FLOAT ASSIGN exp
+    | ID_BOOL ASSIGN bexp
+    | ID_STR ASSIGN stexp
+    | ID_COM ASSIGN cexp
+    /*| ID ASSIGN exp
     | ID ASSIGN cexp
-    | ID ASSIGN bexp //union?
+    | ID ASSIGN stexp
+    | ID ASSIGN bexp*/ //not yet declared variables get generic id
+    //can remove comment later after the semantic checks that the variable exists 
     | ID '(' call_list ')'
     | ID OF ID ASSIGN exp
     | ID OF ID '(' call_list ')'
     | PRINT '(' exp ')'
-    | PRINT '(' stexp ')'
-    ;
+    | PRINT '(' stexp ')';
 
 block
     : '{' list '}'
