@@ -1,11 +1,16 @@
 %code requires {
   #include <string>
   #include <cmath>
+  #include <vector>
   using namespace std;
 
   struct Complex {
       float real;
       float imag;
+  };
+  struct Param {
+      string type;
+      string name;
   };
 }
 %left OR
@@ -38,6 +43,8 @@ vector<SymTable*> symTables;
      bool Bool;
      char Char;
      struct Complex Comp;
+     struct Param* Param;
+     vector<struct Param*>* ParamList;
 }
 
 //%destructor { delete $$; } <Str> 
@@ -58,6 +65,8 @@ vector<SymTable*> symTables;
 %type<Str> stexp
 %type<Str> TYPENAME
 %type<Comp> cexp
+%type<Param> param
+%type<ParamList> list_param
 %start progr
 %%
 progr :  declarations main {if (errorCount == 0) cout<< "The program is correct!" << endl;}
@@ -118,7 +127,13 @@ fundecl : SUMMON ID AS TYPENAME  '(' list_param ')'{
                          yyerror("Function already defined");
                          delete $4; delete $2;
                     }
-} ';'
+                    //cleanup unused params
+                    vector<Param*>* params = $6;
+                    for(auto p : *params) delete p;
+                    delete params;
+          } ';'
+          //above is simple func definition without body
+          //below is func def with body and add params in scope
               | SUMMON ID AS TYPENAME  '(' list_param ')' {
                     if(!current->existsId($2)) {
                          string* s = new string("func");
@@ -130,7 +145,26 @@ fundecl : SUMMON ID AS TYPENAME  '(' list_param ')'{
                          delete $4; delete $2;
                     }
               }
-              newscopefunc '{' insidefunc '}' {current = current->getParent();}';'
+              newscopefunc '{' 
+              {
+                    //add params in the func scope
+                    vector<Param*>* params = $6;
+                    for(auto p : *params) {
+                        if(!current->existsId(&p->name)) {
+                            string* s = new string("param");
+                            current->addSym(&p->type, &p->name, s);
+                            delete s;
+                        } else {
+                            errorCount++; 
+                            yyerror("Parameter already defined in function scope");     
+                        }
+                        delete p;
+                    }
+                    delete params;
+              }
+              insidefunc '}' {current = current->getParent();}';'
+          //without any extra code it would be 
+          //SUMMON ID AS TYPENAME '(' list_param ')' '{' insidefunc '}' ';'
           ;
 insidefunc : 
             | insidefunc decl
@@ -211,20 +245,36 @@ stexp : STRING { $$ = $1; }
      | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
      ;
 
-list_param : 
+list_param : //empty
+          {
+          $$= new vector<Param*>();
+          }
             |param
+          {
+               $$= new vector<Param*>();
+               $$->push_back($1);
+          }
             | list_param ','  param 
+          {
+               $$ = $1; //og vector and add new param to the end ($3)
+               $$->push_back($3);
+          }
             ;
             
 param : TYPENAME ID 
+     {
+         $$ = new Param();
+         $$->type = *$1;
+         $$->name = *$2;
+         delete $1; delete $2;
+     }
       ; 
       
 
 main : BEGIN_MAIN list END_MAIN  
      ;
      
-list
-    : 
+list: //empty
     | list statement
     ;
 
