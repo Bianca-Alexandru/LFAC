@@ -1,8 +1,8 @@
 #include "SymTable.h"
 using namespace std;
 
-void SymTable::addVar(string* type, string*name) {
-    IdInfo var(type, name);
+void SymTable::addSym(string* type, string*name, string* category) {
+    IdInfo var(type, name, category);
     ids[*name] = var; 
 }
 

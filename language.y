@@ -74,9 +74,9 @@ TYPENAME : TYPE { $$ = $1; }
 
 decl       :  SUMMON ID AS TYPENAME ';' { 
                               if(!current->existsId($2)) {
-                                    current->addVar($4,$2);
-                                    delete $4;
-                                    delete $2;
+                                   string* s = new string("var");
+                                    current->addSym($4,$2, s);
+                                    delete $4; delete $2; delete s;
                               } else {
                                    errorCount++; 
                                    yyerror("Variable already defined");
@@ -85,7 +85,7 @@ decl       :  SUMMON ID AS TYPENAME ';' {
                           }
                | SUMMON ID AS TYPENAME ',' decl { 
                               if(!current->existsId($2)) {
-                                    current->addVar($4,$2);
+                                    current->addSym($4,$2, new string("var"));
                                     delete $4;
                                     delete $2;
                               } else {
@@ -107,14 +107,47 @@ newscopeclass:{
                     current = newScope;
                  }
            ;
-fundecl : SUMMON ID AS TYPENAME  '(' list_param ')' ';'
-              | SUMMON ID AS TYPENAME  '(' list_param ')' newscopefunc '{' insidefunc '}' {current = current->getParent();}';'
+
+fundecl : SUMMON ID AS TYPENAME  '(' list_param ')'{
+                    if(!current->existsId($2)) {
+                         string* s = new string("func");
+                         current->addSym($4,$2, s);
+                         delete $4; delete $2; delete s;
+                    } else {
+                         errorCount++; 
+                         yyerror("Function already defined");
+                         delete $4; delete $2;
+                    }
+} ';'
+              | SUMMON ID AS TYPENAME  '(' list_param ')' {
+                    if(!current->existsId($2)) {
+                         string* s = new string("func");
+                         current->addSym($4,$2, s);
+                         delete $4; delete $2; delete s;
+                    } else {
+                         errorCount++; 
+                         yyerror("Function already defined");
+                         delete $4; delete $2;
+                    }
+              }
+              newscopefunc '{' insidefunc '}' {current = current->getParent();}';'
           ;
 insidefunc : 
             | insidefunc decl
             | insidefunc statement
           ;
-classdecl : ARISE ID newscopeclass'{' class_body '}' ';'
+classdecl : ARISE ID {
+                         if(!current->existsId($2)) {
+                              string* s = new string("class");
+                              current->addSym(s,$2, s);
+                              delete $2; delete s;
+                         } else {
+                               errorCount++; 
+                               yyerror("Class already defined");
+                               delete $2;
+                         }
+          }
+          newscopeclass'{' class_body '}' {current = current->getParent();} ';'
           ;
 
 class_body : 
