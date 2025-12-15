@@ -132,7 +132,7 @@ newscopefunc:{
                     current = newScope;
                  }
            ;
-newscopeclass:{PRIVATE
+newscopeclass:{
                     SymTable* newScope = new SymTable("class", current);
                     symTables.push_back(newScope);
                     current = newScope;
@@ -248,18 +248,93 @@ exp :  exp '+' exp  {//NOT relevant WILL need to change later into smth like $$ 
      | '-' exp %prec UMINUS { $$ = -$2; }
      | QAT { $$ = $1; }
      | ZAT { $$ = $1; }
-     | ID_INT OF ID { $$ = 0; delete $1; delete $3; } //placeholder
-     | ID_FLOAT OF ID { $$ = 0; delete $1; delete $3; } //placeholder
-     | ID_INT { $$ = 0; delete $1; } //placeholder
-     | ID_FLOAT { $$ = 0; delete $1; } //placeholder
+     | ID_INT OF ID { 
+     // Verificăm că obiectul există
+     if(!current->existsId($3)) {
+        errorCount++;
+        string msg = "Variable '" + *$3 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     // Verificăm că field-ul există în clasă
+     else {
+        IdInfo* objInfo = current->getId($3);
+        if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
+            errorCount++;
+            string msg = "Field '" + *$1 + "' does not exist in class";
+            yyerror(msg.c_str());
+        }
+     }
+     $$ = 0; 
+     delete $1; delete $3; 
+     }
+     | ID_FLOAT OF ID { 
+     if(!current->existsId($3)) {
+        errorCount++;
+        string msg = "Variable '" + *$3 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     else {
+        IdInfo* objInfo = current->getId($3);
+        if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
+            errorCount++;
+            string msg = "Field '" + *$1 + "' does not exist in class";
+            yyerror(msg.c_str());
+        }
+     }
+     $$ = 0; 
+     delete $1; delete $3; 
+     }
+     | ID_INT { 
+     if(!current->existsId($1)) {
+        errorCount++;
+        string msg = "Variable '" + *$1 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     $$ = 0; 
+     delete $1; 
+     }
+     | ID_FLOAT { 
+     if(!current->existsId($1)) {
+        errorCount++;
+        string msg = "Variable '" + *$1 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     $$ = 0; 
+     delete $1; 
+     }
+
      | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
      | REAL '(' cexp ')' { $$ = $3.real; }
      | IMAG '(' cexp ')' { $$ = $3.imag; }
      ;
 
 bexp : BOOL { $$ = $1; }
-     | ID_BOOL {$$ = false; delete $1; } //placeholder
-     | ID_BOOL OF ID { $$ = false; delete $1; delete $3; }
+     | ID_BOOL {
+     if(!current->existsId($1)) {
+        errorCount++;
+        string msg = "Variable '" + *$1 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     $$ = false; 
+     delete $1; 
+     }
+     | ID_BOOL OF ID { 
+     if(!current->existsId($3)) {
+        errorCount++;
+        string msg = "Variable '" + *$3 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     else {
+        IdInfo* objInfo = current->getId($3);
+        if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
+            errorCount++;
+            string msg = "Field '" + *$1 + "' does not exist in class";
+            yyerror(msg.c_str());
+        }
+     }
+     $$ = false; 
+     delete $1; delete $3; 
+     }
      | bexp AND bexp { $$ = $1 && $3; }
      | bexp OR bexp { $$ = $1 || $3; }
      | '!' bexp { $$ = !$2; }
@@ -272,8 +347,32 @@ bexp : BOOL { $$ = $1; }
      ;
 
 cexp : CAT { $$.real = 0; $$.imag = $1; } 
-     | ID_COM { $$.real = 0; $$.imag = 0; delete $1; } //placeholder
-     | ID_COM OF ID { $$.real = 0; $$.imag = 0; delete $1; delete $3; }
+     | ID_COM { 
+     if(!current->existsId($1)) {
+        errorCount++;
+        string msg = "Variable '" + *$1 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     $$.real = 0; $$.imag = 0; 
+     delete $1; 
+     }
+     | ID_COM OF ID { 
+     if(!current->existsId($3)) {
+        errorCount++;
+        string msg = "Variable '" + *$3 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     else {
+        IdInfo* objInfo = current->getId($3);
+        if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
+            errorCount++;
+            string msg = "Field '" + *$1 + "' does not exist in class";
+            yyerror(msg.c_str());
+        }
+     }
+     $$.real = 0; $$.imag = 0; 
+     delete $1; delete $3; 
+     }
      | cexp '+' cexp { $$.real = $1.real + $3.real; $$.imag = $1.imag + $3.imag; }
      | cexp '-' cexp { $$.real = $1.real - $3.real; $$.imag = $1.imag - $3.imag; }
      | cexp '*' cexp { //DOES NOT NEED  () 
@@ -290,8 +389,32 @@ cexp : CAT { $$.real = 0; $$.imag = $1; }
      ;
 
 stexp : STRING { $$ = $1; }
-     | ID_STR { $$ = new string(""); delete $1; } //placeholder
-     | ID_STR OF ID { $$ = new string(""); delete $1; delete $3; }
+     | ID_STR { 
+     if(!current->existsId($1)) {
+        errorCount++;
+        string msg = "Variable '" + *$1 + "' not defined";
+        yyerror(msg.c_str());
+     }     
+     $$ = new string(""); 
+     delete $1; 
+     }
+     | ID_STR OF ID { 
+     if(!current->existsId($3)) {
+        errorCount++;
+        string msg = "Variable '" + *$3 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     else {
+        IdInfo* objInfo = current->getId($3);
+        if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
+            errorCount++;
+            string msg = "Field '" + *$1 + "' does not exist in class";
+            yyerror(msg.c_str());
+        }
+     }
+     $$ = new string(""); 
+     delete $1; delete $3; 
+     }
      | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
      ;
 
@@ -345,7 +468,14 @@ simple_statement
     | ID ASSIGN stexp
     | ID ASSIGN bexp*/ //not yet declared variables get generic id
     //can remove comment later after the semantic checks that the variable exists 
-    | ID '(' call_list ')'
+    | ID '(' call_list ')' { 
+     if(!current->existsId($1)) {
+        errorCount++;
+        string msg = "Function '" + *$1 + "' not defined";
+        yyerror(msg.c_str());
+     }
+     delete $1; 
+     }
     | ANYID OF ANYID ASSIGN exp {
         // ANYID permite orice tip de ID (ID, ID_INT, ID_FLOAT, etc.)
         if(!current->existsId($3)) {

@@ -970,7 +970,7 @@ YY_RULE_SETUP
     string name = yytext;
     if(current && current->existsId(&name)) {
         string type = current->getType(&name);
-        yylval.Str = new std::string(yytext);
+        yylval.Str = new std::string(yytext);//era inainte type dar am nevoie de nume nu de tip
 
         if (type == "bool") return ID_BOOL;
         else if (type == "int" ) return ID_INT;
