@@ -1,6 +1,12 @@
 #include "SymTable.h"
 using namespace std;
 
+IdInfo* SymTable::getId(string* s) {
+    if (ids.count(*s))
+        return &ids[*s];
+    return NULL;
+}
+
 void SymTable::addSym(string* type, string*name, string* category, vector<string> params) {
     IdInfo var(type, name, category);
     var.params = params;
@@ -12,6 +18,12 @@ bool SymTable::existsId(string* var) {
     if(ids.count(*var)) return true;
     if (parent) return parent->existsId(var);
     return false;
+}
+
+void SymTable::setClassScopeForId(string* idName, SymTable* scope) {
+    if(ids.count(*idName)) {
+        ids[*idName].classScope = scope;
+    }
 }
 
 void printSpaces(int n) {
@@ -60,8 +72,33 @@ string SymTable::getType(string* name) {
     return "";
 }
 
-SymTable::~SymTable() {
-    ids.clear();
+SymTable* SymTable::getClassScope(string* className) {
+    // Căutăm clasa în scope-ul curent
+    if(ids.count(*className) && ids[*className].category == "class") {
+        return ids[*className].classScope;
+    }
+    // Dacă nu e în scope-ul curent, căutăm în parent
+    if(parent) return parent->getClassScope(className);
+    return NULL;
+}
+
+bool SymTable::hasField(string* className, string* fieldName) {
+    SymTable* classTable = getClassScope(className);
+    if(classTable) {
+        return classTable->existsId(fieldName);
+    }
+    return false;
+}
+
+string SymTable::getFieldType(string* className, string* fieldName) {
+    SymTable* classTable = getClassScope(className);
+    if(classTable) {
+        return classTable->getType(fieldName);
+    }
+    return "";
+}
+SymTable::~SymTable() {//dadea eroare ca e declarat si nefolosit
+    // nimic de eliberat explicit
 }
 
 

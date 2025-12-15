@@ -37,6 +37,7 @@ void yyerror(const char * s);
 class SymTable* current;
 int errorCount = 0;
 vector<SymTable*> symTables;
+string* tempClassName = NULL;
 %}
 
 %union {
@@ -96,7 +97,11 @@ ANYID : ID       { $$ = $1; }
 decl       :  SUMMON ANYID AS TYPENAME ';' { 
                               if(!current->existsId($2)) {
                                    string* s = new string("var");
-                                    current->addSym($4,$2, s);
+                                   current->addSym($4,$2, s);
+                                   SymTable* classTable = current->getClassScope($4);
+                                   if(classTable) {
+                                        current->setClassScopeForId($2, classTable);
+        }
                                     delete $4; delete $2; delete s;
                               } else {
                                    errorCount++; 
@@ -106,9 +111,14 @@ decl       :  SUMMON ANYID AS TYPENAME ';' {
                           }
                | SUMMON ANYID AS TYPENAME ',' decl { 
                               if(!current->existsId($2)) {
-                                    current->addSym($4,$2, new string("var"));
-                                    delete $4;
-                                    delete $2;
+                                   string* s = new string("var");
+                                   current->addSym($4, $2, s);
+                                   SymTable* classTable = current->getClassScope($4);
+                                   if(classTable) {
+                                         current->setClassScopeForId($2, classTable);
+                                      }
+        
+                                   delete $4; delete $2; delete s;
                               } else {
                                    errorCount++; 
                                    yyerror("Variable already defined");
@@ -122,7 +132,7 @@ newscopefunc:{
                     current = newScope;
                  }
            ;
-newscopeclass:{
+newscopeclass:{PRIVATE
                     SymTable* newScope = new SymTable("class", current);
                     symTables.push_back(newScope);
                     current = newScope;
@@ -194,14 +204,30 @@ classdecl : ARISE ID {
                          if(!current->existsId($2)) {
                               string* s = new string("class");
                               current->addSym(s,$2, s);
+                              tempClassName = new string(*$2);
                               delete $2; delete s;
+                              
                          } else {
                                errorCount++; 
                                yyerror("Class already defined");
                                delete $2;
                          }
           }
-          newscopeclass'{' class_body '}' {current = current->getParent();} ';'
+          newscopeclass
+          '{' 
+          {
+                  if(tempClassName) {
+                  SymTable* parentScope = current->getParent();
+                  if(parentScope) {
+                      parentScope->setClassScopeForId(tempClassName, current);
+                  }
+                  delete tempClassName;
+                  tempClassName = NULL;
+              }
+
+          }
+           class_body '}' 
+          {current = current->getParent();} ';'
           ;
 
 class_body : 
@@ -320,8 +346,50 @@ simple_statement
     | ID ASSIGN bexp*/ //not yet declared variables get generic id
     //can remove comment later after the semantic checks that the variable exists 
     | ID '(' call_list ')'
-    | ID OF ID ASSIGN exp
-    | ID OF ID '(' call_list ')'
+    | ANYID OF ANYID ASSIGN exp {
+        // ANYID permite orice tip de ID (ID, ID_INT, ID_FLOAT, etc.)
+        if(!current->existsId($3)) {
+            errorCount++;
+            yyerror("Object not defined");
+        } else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            
+            if (!info->classScope) {
+                errorCount++;
+                string msg = "Variable '" + *$3 + "' is not a class instance";
+                yyerror(msg.c_str());
+            }
+            else if (!info->classScope->existsId($1)) {
+                errorCount++;
+                string msg = "Field '" + *$1 + "' does not exist in class '" + objType + "'";
+                yyerror(msg.c_str());
+            }
+        }
+        delete $1; delete $3;
+    }
+    | ANYID OF ANYID '(' call_list ')' {
+        if(!current->existsId($3)) {
+            errorCount++;
+            yyerror("Object not defined");
+        } else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            
+            if (!info->classScope) {
+                errorCount++;
+                string msg = "Variable '" + *$3 + "' is not a class instance";
+                yyerror(msg.c_str());
+            }
+            else if (!info->classScope->existsId($1)) {
+                errorCount++;
+                string msg = "Method '" + *$1 + "' does not exist in class '" + objType + "'";
+                yyerror(msg.c_str());
+            }
+        }
+        delete $1; delete $3;
+    }
+
     | PRINT '(' exp ')'
     | PRINT '(' stexp ')';
 

@@ -1,0 +1,22 @@
+Variables:
+Scope: global (Root)
+   Symbol: Pixel          | Category: class| Type: class
+   Symbol: b1             | Category: var  | Type: bool 
+   Symbol: b2             | Category: var  | Type: bool 
+   Symbol: c              | Category: var  | Type: com  
+   Symbol: i              | Category: var  | Type: com  
+   Symbol: iterate        | Category: func | Type: void  | Param Types: [float]
+   Symbol: m              | Category: var  | Type: float
+   Symbol: manyparams     | Category: func | Type: com   | Param Types: [int, int, int, float, float, com, com, string]
+   Symbol: p              | Category: var  | Type: Pixel
+   Symbol: x              | Category: var  | Type: int  
+   Symbol: z              | Category: var  | Type: com  
+
+Scope: class (Parent: global)
+   Symbol: draw           | Category: func | Type: com   | Param Types: [Pixel, Pixel]
+   Symbol: ii             | Category: var  | Type: float
+   Symbol: r              | Category: var  | Type: float
+
+Scope: func (Parent: global)
+   Symbol: limit          | Category: param| Type: float
+
