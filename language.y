@@ -155,6 +155,15 @@ fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
                     }
                     //cleanup unused params
                     vector<Param*>* params = $6;
+                    for(size_t i = 0; i < params->size(); i++) {
+                        for(size_t j = i + 1; j < params->size(); j++) {
+                            if(params->at(i)->name == params->at(j)->name) {
+                                errorCount++;
+                                string msg = "Duplicate parameter '" + params->at(i)->name + "' in function declaration";
+                                yyerror(msg.c_str());
+                            }
+                        }
+                    }
                     for(auto p : *params) delete p;
                     delete params;
           } ';'

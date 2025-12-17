@@ -585,15 +585,15 @@ static const yytype_int16 yyrline[] =
 {
        0,    77,    77,    79,    80,    81,    82,    85,    86,    89,
       90,    91,    92,    93,    94,    97,   112,   129,   135,   142,
-     142,   163,   179,   195,   163,   199,   200,   201,   203,   218,
-     230,   203,   233,   234,   235,   238,   241,   242,   243,   244,
-     245,   246,   247,   248,   249,   250,   251,   270,   287,   296,
-     306,   307,   308,   311,   312,   321,   338,   339,   340,   341,
-     342,   343,   344,   345,   346,   349,   350,   359,   376,   377,
-     378,   383,   388,   391,   392,   401,   418,   422,   425,   430,
-     437,   447,   450,   451,   455,   456,   457,   461,   462,   463,
-     464,   465,   471,   479,   501,   523,   524,   527,   531,   532,
-     536,   540,   541,   542
+     142,   172,   188,   204,   172,   208,   209,   210,   212,   227,
+     239,   212,   242,   243,   244,   247,   250,   251,   252,   253,
+     254,   255,   256,   257,   258,   259,   260,   279,   296,   305,
+     315,   316,   317,   320,   321,   330,   347,   348,   349,   350,
+     351,   352,   353,   354,   355,   358,   359,   368,   385,   386,
+     387,   392,   397,   400,   401,   410,   427,   431,   434,   439,
+     446,   456,   459,   460,   464,   465,   466,   470,   471,   472,
+     473,   474,   480,   488,   510,   532,   533,   536,   540,   541,
+     545,   549,   550,   551
 };
 #endif
 
@@ -1697,14 +1697,23 @@ yyreduce:
                     }
                     //cleanup unused params
                     vector<Param*>* params = (yyvsp[-1].ParamList);
+                    for(size_t i = 0; i < params->size(); i++) {
+                        for(size_t j = i + 1; j < params->size(); j++) {
+                            if(params->at(i)->name == params->at(j)->name) {
+                                errorCount++;
+                                string msg = "Duplicate parameter '" + params->at(i)->name + "' in function declaration";
+                                yyerror(msg.c_str());
+                            }
+                        }
+                    }
                     for(auto p : *params) delete p;
                     delete params;
           }
-#line 1704 "language.tab.c"
+#line 1713 "language.tab.c"
     break;
 
   case 21: /* $@2: %empty  */
-#line 163 "language.y"
+#line 172 "language.y"
                                                              {
                     if(!current->existsId((yyvsp[-5].Str))) {
                          string* s = new string("func");
@@ -1720,11 +1729,11 @@ yyreduce:
                          delete (yyvsp[-3].Str); delete (yyvsp[-5].Str);
                     }
               }
-#line 1724 "language.tab.c"
+#line 1733 "language.tab.c"
     break;
 
   case 22: /* $@3: %empty  */
-#line 179 "language.y"
+#line 188 "language.y"
               {
                     //add params in the func scope
                     vector<Param*>* params = (yyvsp[-4].ParamList);
@@ -1741,17 +1750,17 @@ yyreduce:
                     }
                     delete params;
               }
-#line 1745 "language.tab.c"
+#line 1754 "language.tab.c"
     break;
 
   case 23: /* $@4: %empty  */
-#line 195 "language.y"
+#line 204 "language.y"
                              {current = current->getParent();}
-#line 1751 "language.tab.c"
+#line 1760 "language.tab.c"
     break;
 
   case 28: /* $@5: %empty  */
-#line 203 "language.y"
+#line 212 "language.y"
                      {
                          if(!current->existsId((yyvsp[0].Str))) {
                               string* s = new string("class");
@@ -1765,11 +1774,11 @@ yyreduce:
                                delete (yyvsp[0].Str);
                          }
           }
-#line 1769 "language.tab.c"
+#line 1778 "language.tab.c"
     break;
 
   case 29: /* $@6: %empty  */
-#line 218 "language.y"
+#line 227 "language.y"
           {
                   if(tempClassName) {
                   SymTable* parentScope = current->getParent();
@@ -1781,85 +1790,85 @@ yyreduce:
               }
 
           }
-#line 1785 "language.tab.c"
+#line 1794 "language.tab.c"
     break;
 
   case 30: /* $@7: %empty  */
-#line 230 "language.y"
+#line 239 "language.y"
           {current = current->getParent();}
-#line 1791 "language.tab.c"
+#line 1800 "language.tab.c"
     break;
 
   case 35: /* exp: exp '+' exp  */
-#line 238 "language.y"
+#line 247 "language.y"
                     {//NOT relevant WILL need to change later into smth like $$ = new ASTNode("+", $1, $3);
                     //not necessary to delete rn but will be deleted later for part4 
      (yyval.Float) = (yyvsp[-2].Float) + (yyvsp[0].Float); }
-#line 1799 "language.tab.c"
+#line 1808 "language.tab.c"
     break;
 
   case 36: /* exp: exp '-' exp  */
-#line 241 "language.y"
+#line 250 "language.y"
                    {(yyval.Float) = (yyvsp[-2].Float) - (yyvsp[0].Float);}
-#line 1805 "language.tab.c"
+#line 1814 "language.tab.c"
     break;
 
   case 37: /* exp: exp '*' exp  */
-#line 242 "language.y"
+#line 251 "language.y"
                     {(yyval.Float) = (yyvsp[-2].Float) * (yyvsp[0].Float);}
-#line 1811 "language.tab.c"
+#line 1820 "language.tab.c"
     break;
 
   case 38: /* exp: exp '/' exp  */
-#line 243 "language.y"
+#line 252 "language.y"
                    {(yyval.Float) = (yyvsp[-2].Float) / (yyvsp[0].Float);}
-#line 1817 "language.tab.c"
+#line 1826 "language.tab.c"
     break;
 
   case 39: /* exp: exp '%' exp  */
-#line 244 "language.y"
+#line 253 "language.y"
                    {(yyval.Float) = (int)(yyvsp[-2].Float) % (int)(yyvsp[0].Float);}
-#line 1823 "language.tab.c"
+#line 1832 "language.tab.c"
     break;
 
   case 40: /* exp: exp '^' exp  */
-#line 245 "language.y"
+#line 254 "language.y"
                    {(yyval.Float) = pow((yyvsp[-2].Float),(yyvsp[0].Float));}
-#line 1829 "language.tab.c"
+#line 1838 "language.tab.c"
     break;
 
   case 41: /* exp: '(' exp ')'  */
-#line 246 "language.y"
+#line 255 "language.y"
                    { (yyval.Float) = (yyvsp[-1].Float); }
-#line 1835 "language.tab.c"
+#line 1844 "language.tab.c"
     break;
 
   case 42: /* exp: exp '!'  */
-#line 247 "language.y"
+#line 256 "language.y"
               {(yyval.Float) = 1; for(int i=1;i<=(yyvsp[-1].Float);i++) (yyval.Float) *= i;}
-#line 1841 "language.tab.c"
+#line 1850 "language.tab.c"
     break;
 
   case 43: /* exp: '-' exp  */
-#line 248 "language.y"
+#line 257 "language.y"
                             { (yyval.Float) = -(yyvsp[0].Float); }
-#line 1847 "language.tab.c"
+#line 1856 "language.tab.c"
     break;
 
   case 44: /* exp: QAT  */
-#line 249 "language.y"
+#line 258 "language.y"
            { (yyval.Float) = (yyvsp[0].Float); }
-#line 1853 "language.tab.c"
+#line 1862 "language.tab.c"
     break;
 
   case 45: /* exp: ZAT  */
-#line 250 "language.y"
+#line 259 "language.y"
            { (yyval.Float) = (yyvsp[0].Int); }
-#line 1859 "language.tab.c"
+#line 1868 "language.tab.c"
     break;
 
   case 46: /* exp: ID_INT OF ID  */
-#line 251 "language.y"
+#line 260 "language.y"
                     { 
      // Verificăm că obiectul există
      if(!current->existsId((yyvsp[0].Str))) {
@@ -1879,11 +1888,11 @@ yyreduce:
      (yyval.Float) = 0; 
      delete (yyvsp[-2].Str); delete (yyvsp[0].Str); 
      }
-#line 1883 "language.tab.c"
+#line 1892 "language.tab.c"
     break;
 
   case 47: /* exp: ID_FLOAT OF ID  */
-#line 270 "language.y"
+#line 279 "language.y"
                       { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -1901,11 +1910,11 @@ yyreduce:
      (yyval.Float) = 0; 
      delete (yyvsp[-2].Str); delete (yyvsp[0].Str); 
      }
-#line 1905 "language.tab.c"
+#line 1914 "language.tab.c"
     break;
 
   case 48: /* exp: ID_INT  */
-#line 287 "language.y"
+#line 296 "language.y"
               { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -1915,11 +1924,11 @@ yyreduce:
      (yyval.Float) = 0; 
      delete (yyvsp[0].Str); 
      }
-#line 1919 "language.tab.c"
+#line 1928 "language.tab.c"
     break;
 
   case 49: /* exp: ID_FLOAT  */
-#line 296 "language.y"
+#line 305 "language.y"
                 { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -1929,35 +1938,35 @@ yyreduce:
      (yyval.Float) = 0; 
      delete (yyvsp[0].Str); 
      }
-#line 1933 "language.tab.c"
+#line 1942 "language.tab.c"
     break;
 
   case 50: /* exp: MAG '(' cexp ')'  */
-#line 306 "language.y"
+#line 315 "language.y"
                          { (yyval.Float) = sqrt(pow((yyvsp[-1].Comp).real, 2) + pow((yyvsp[-1].Comp).imag, 2)); }
-#line 1939 "language.tab.c"
+#line 1948 "language.tab.c"
     break;
 
   case 51: /* exp: REAL '(' cexp ')'  */
-#line 307 "language.y"
+#line 316 "language.y"
                          { (yyval.Float) = (yyvsp[-1].Comp).real; }
-#line 1945 "language.tab.c"
+#line 1954 "language.tab.c"
     break;
 
   case 52: /* exp: IMAG '(' cexp ')'  */
-#line 308 "language.y"
+#line 317 "language.y"
                          { (yyval.Float) = (yyvsp[-1].Comp).imag; }
-#line 1951 "language.tab.c"
+#line 1960 "language.tab.c"
     break;
 
   case 53: /* bexp: BOOL  */
-#line 311 "language.y"
+#line 320 "language.y"
             { (yyval.Bool) = (yyvsp[0].Bool); }
-#line 1957 "language.tab.c"
+#line 1966 "language.tab.c"
     break;
 
   case 54: /* bexp: ID_BOOL  */
-#line 312 "language.y"
+#line 321 "language.y"
                {
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -1967,11 +1976,11 @@ yyreduce:
      (yyval.Bool) = false; 
      delete (yyvsp[0].Str); 
      }
-#line 1971 "language.tab.c"
+#line 1980 "language.tab.c"
     break;
 
   case 55: /* bexp: ID_BOOL OF ID  */
-#line 321 "language.y"
+#line 330 "language.y"
                      { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -1989,71 +1998,71 @@ yyreduce:
      (yyval.Bool) = false; 
      delete (yyvsp[-2].Str); delete (yyvsp[0].Str); 
      }
-#line 1993 "language.tab.c"
+#line 2002 "language.tab.c"
     break;
 
   case 56: /* bexp: bexp AND bexp  */
-#line 338 "language.y"
+#line 347 "language.y"
                      { (yyval.Bool) = (yyvsp[-2].Bool) && (yyvsp[0].Bool); }
-#line 1999 "language.tab.c"
+#line 2008 "language.tab.c"
     break;
 
   case 57: /* bexp: bexp OR bexp  */
-#line 339 "language.y"
+#line 348 "language.y"
                     { (yyval.Bool) = (yyvsp[-2].Bool) || (yyvsp[0].Bool); }
-#line 2005 "language.tab.c"
+#line 2014 "language.tab.c"
     break;
 
   case 58: /* bexp: '!' bexp  */
-#line 340 "language.y"
+#line 349 "language.y"
                 { (yyval.Bool) = !(yyvsp[0].Bool); }
-#line 2011 "language.tab.c"
+#line 2020 "language.tab.c"
     break;
 
   case 59: /* bexp: exp '<' exp  */
-#line 341 "language.y"
+#line 350 "language.y"
                    { (yyval.Bool) = (yyvsp[-2].Float) < (yyvsp[0].Float); }
-#line 2017 "language.tab.c"
+#line 2026 "language.tab.c"
     break;
 
   case 60: /* bexp: exp '>' exp  */
-#line 342 "language.y"
+#line 351 "language.y"
                    { (yyval.Bool) = (yyvsp[-2].Float) > (yyvsp[0].Float); }
-#line 2023 "language.tab.c"
+#line 2032 "language.tab.c"
     break;
 
   case 61: /* bexp: exp LEQ exp  */
-#line 343 "language.y"
+#line 352 "language.y"
                    { (yyval.Bool) = (yyvsp[-2].Float) <= (yyvsp[0].Float); }
-#line 2029 "language.tab.c"
+#line 2038 "language.tab.c"
     break;
 
   case 62: /* bexp: exp GEQ exp  */
-#line 344 "language.y"
+#line 353 "language.y"
                    { (yyval.Bool) = (yyvsp[-2].Float) >= (yyvsp[0].Float); }
-#line 2035 "language.tab.c"
+#line 2044 "language.tab.c"
     break;
 
   case 63: /* bexp: exp EQ exp  */
-#line 345 "language.y"
+#line 354 "language.y"
                   { (yyval.Bool) = (yyvsp[-2].Float) == (yyvsp[0].Float); }
-#line 2041 "language.tab.c"
+#line 2050 "language.tab.c"
     break;
 
   case 64: /* bexp: exp NEQ exp  */
-#line 346 "language.y"
+#line 355 "language.y"
                    { (yyval.Bool) = (yyvsp[-2].Float) != (yyvsp[0].Float); }
-#line 2047 "language.tab.c"
+#line 2056 "language.tab.c"
     break;
 
   case 65: /* cexp: CAT  */
-#line 349 "language.y"
+#line 358 "language.y"
            { (yyval.Comp).real = 0; (yyval.Comp).imag = (yyvsp[0].Float); }
-#line 2053 "language.tab.c"
+#line 2062 "language.tab.c"
     break;
 
   case 66: /* cexp: ID_COM  */
-#line 350 "language.y"
+#line 359 "language.y"
               { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -2063,11 +2072,11 @@ yyreduce:
      (yyval.Comp).real = 0; (yyval.Comp).imag = 0; 
      delete (yyvsp[0].Str); 
      }
-#line 2067 "language.tab.c"
+#line 2076 "language.tab.c"
     break;
 
   case 67: /* cexp: ID_COM OF ID  */
-#line 359 "language.y"
+#line 368 "language.y"
                     { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -2085,55 +2094,55 @@ yyreduce:
      (yyval.Comp).real = 0; (yyval.Comp).imag = 0; 
      delete (yyvsp[-2].Str); delete (yyvsp[0].Str); 
      }
-#line 2089 "language.tab.c"
+#line 2098 "language.tab.c"
     break;
 
   case 68: /* cexp: cexp '+' cexp  */
-#line 376 "language.y"
+#line 385 "language.y"
                      { (yyval.Comp).real = (yyvsp[-2].Comp).real + (yyvsp[0].Comp).real; (yyval.Comp).imag = (yyvsp[-2].Comp).imag + (yyvsp[0].Comp).imag; }
-#line 2095 "language.tab.c"
+#line 2104 "language.tab.c"
     break;
 
   case 69: /* cexp: cexp '-' cexp  */
-#line 377 "language.y"
+#line 386 "language.y"
                      { (yyval.Comp).real = (yyvsp[-2].Comp).real - (yyvsp[0].Comp).real; (yyval.Comp).imag = (yyvsp[-2].Comp).imag - (yyvsp[0].Comp).imag; }
-#line 2101 "language.tab.c"
+#line 2110 "language.tab.c"
     break;
 
   case 70: /* cexp: cexp '*' cexp  */
-#line 378 "language.y"
+#line 387 "language.y"
                      { //DOES NOT NEED  () 
           // 10+0i * 2+3i is accepted by this language as (10+0i)*(2+3i)
           (yyval.Comp).real = ((yyvsp[-2].Comp).real * (yyvsp[0].Comp).real) - ((yyvsp[-2].Comp).imag * (yyvsp[0].Comp).imag);
           (yyval.Comp).imag = ((yyvsp[-2].Comp).real * (yyvsp[0].Comp).imag) + ((yyvsp[-2].Comp).imag * (yyvsp[0].Comp).real);
      }
-#line 2111 "language.tab.c"
+#line 2120 "language.tab.c"
     break;
 
   case 71: /* cexp: cexp '/' cexp  */
-#line 383 "language.y"
+#line 392 "language.y"
                      { 
           float denom = ((yyvsp[0].Comp).real * (yyvsp[0].Comp).real) + ((yyvsp[0].Comp).imag * (yyvsp[0].Comp).imag);
           (yyval.Comp).real = (((yyvsp[-2].Comp).real * (yyvsp[0].Comp).real) + ((yyvsp[-2].Comp).imag * (yyvsp[0].Comp).imag)) / denom;
           (yyval.Comp).imag = (((yyvsp[-2].Comp).imag * (yyvsp[0].Comp).real) - ((yyvsp[-2].Comp).real * (yyvsp[0].Comp).imag)) / denom;
      }
-#line 2121 "language.tab.c"
+#line 2130 "language.tab.c"
     break;
 
   case 72: /* cexp: '(' cexp ')'  */
-#line 388 "language.y"
+#line 397 "language.y"
                     { (yyval.Comp).real = (yyvsp[-1].Comp).real; (yyval.Comp).imag = (yyvsp[-1].Comp).imag; }
-#line 2127 "language.tab.c"
+#line 2136 "language.tab.c"
     break;
 
   case 73: /* stexp: STRING  */
-#line 391 "language.y"
+#line 400 "language.y"
                { (yyval.Str) = (yyvsp[0].Str); }
-#line 2133 "language.tab.c"
+#line 2142 "language.tab.c"
     break;
 
   case 74: /* stexp: ID_STR  */
-#line 392 "language.y"
+#line 401 "language.y"
               { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -2143,11 +2152,11 @@ yyreduce:
      (yyval.Str) = new string(""); 
      delete (yyvsp[0].Str); 
      }
-#line 2147 "language.tab.c"
+#line 2156 "language.tab.c"
     break;
 
   case 75: /* stexp: ID_STR OF ID  */
-#line 401 "language.y"
+#line 410 "language.y"
                     { 
      if(!current->existsId((yyvsp[0].Str))) {
         errorCount++;
@@ -2165,54 +2174,54 @@ yyreduce:
      (yyval.Str) = new string(""); 
      delete (yyvsp[-2].Str); delete (yyvsp[0].Str); 
      }
-#line 2169 "language.tab.c"
+#line 2178 "language.tab.c"
     break;
 
   case 76: /* stexp: stexp '+' stexp  */
-#line 418 "language.y"
+#line 427 "language.y"
                        { (yyval.Str) = new string(*(yyvsp[-2].Str) + *(yyvsp[0].Str)); delete (yyvsp[-2].Str); delete (yyvsp[0].Str); }
-#line 2175 "language.tab.c"
+#line 2184 "language.tab.c"
     break;
 
   case 77: /* list_param: %empty  */
-#line 422 "language.y"
+#line 431 "language.y"
           {
           (yyval.ParamList)= new vector<Param*>();
-          }
-#line 2183 "language.tab.c"
-    break;
-
-  case 78: /* list_param: param  */
-#line 426 "language.y"
-          {
-               (yyval.ParamList)= new vector<Param*>();
-               (yyval.ParamList)->push_back((yyvsp[0].Param));
           }
 #line 2192 "language.tab.c"
     break;
 
-  case 79: /* list_param: list_param ',' param  */
-#line 431 "language.y"
+  case 78: /* list_param: param  */
+#line 435 "language.y"
           {
-               (yyval.ParamList) = (yyvsp[-2].ParamList); //og vector and add new param to the end ($3)
+               (yyval.ParamList)= new vector<Param*>();
                (yyval.ParamList)->push_back((yyvsp[0].Param));
           }
 #line 2201 "language.tab.c"
     break;
 
+  case 79: /* list_param: list_param ',' param  */
+#line 440 "language.y"
+          {
+               (yyval.ParamList) = (yyvsp[-2].ParamList); //og vector and add new param to the end ($3)
+               (yyval.ParamList)->push_back((yyvsp[0].Param));
+          }
+#line 2210 "language.tab.c"
+    break;
+
   case 80: /* param: TYPENAME ANYID  */
-#line 438 "language.y"
+#line 447 "language.y"
      {
          (yyval.Param) = new Param();
          (yyval.Param)->type = *(yyvsp[-1].Str);
          (yyval.Param)->name = *(yyvsp[0].Str);
          delete (yyvsp[-1].Str); delete (yyvsp[0].Str);
      }
-#line 2212 "language.tab.c"
+#line 2221 "language.tab.c"
     break;
 
   case 92: /* simple_statement: ID '(' call_list ')'  */
-#line 471 "language.y"
+#line 480 "language.y"
                            { 
      if(!current->existsId((yyvsp[-3].Str))) {
         errorCount++;
@@ -2221,11 +2230,11 @@ yyreduce:
      }
      delete (yyvsp[-3].Str); 
      }
-#line 2225 "language.tab.c"
+#line 2234 "language.tab.c"
     break;
 
   case 93: /* simple_statement: ANYID OF ANYID ASSIGN exp  */
-#line 479 "language.y"
+#line 488 "language.y"
                                 {
         // ANYID permite orice tip de ID (ID, ID_INT, ID_FLOAT, etc.)
         if(!current->existsId((yyvsp[-2].Str))) {
@@ -2248,11 +2257,11 @@ yyreduce:
         }
         delete (yyvsp[-4].Str); delete (yyvsp[-2].Str);
     }
-#line 2252 "language.tab.c"
+#line 2261 "language.tab.c"
     break;
 
   case 94: /* simple_statement: ANYID OF ANYID '(' call_list ')'  */
-#line 501 "language.y"
+#line 510 "language.y"
                                        {
         if(!current->existsId((yyvsp[-3].Str))) {
             errorCount++;
@@ -2274,11 +2283,11 @@ yyreduce:
         }
         delete (yyvsp[-5].Str); delete (yyvsp[-3].Str);
     }
-#line 2278 "language.tab.c"
+#line 2287 "language.tab.c"
     break;
 
 
-#line 2282 "language.tab.c"
+#line 2291 "language.tab.c"
 
       default: break;
     }
@@ -2502,7 +2511,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 544 "language.y"
+#line 553 "language.y"
 
 void yyerror(const char * s){
      cout << "error:" << s << " at line: " << yylineno << endl;

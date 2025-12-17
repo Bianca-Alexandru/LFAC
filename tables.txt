@@ -7,7 +7,7 @@ Scope: global (Root)
    Symbol: i              | Category: var  | Type: com  
    Symbol: iterate        | Category: func | Type: void  | Param Types: [float]
    Symbol: m              | Category: var  | Type: float
-   Symbol: manyparams     | Category: func | Type: com   | Param Types: [int, int, int, float, float, com, com, string]
+   Symbol: manyparams     | Category: func | Type: com   | Param Types: [int, int, int, int, float, float, com, com, string]
    Symbol: p              | Category: var  | Type: Pixel
    Symbol: x              | Category: var  | Type: int  
    Symbol: z              | Category: var  | Type: com  
