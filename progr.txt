@@ -4,11 +4,14 @@ summon m as float;
 summon i as com;
 summon x as int;
 summon b1 as bool, summon b2 as bool;
+summon st as string;
 
 arise Pixel {
 summon r as float;
 summon ii as float;
-summon draw as com (Pixel p1, Pixel p2);
+summon draw as com (Pixel p1, Pixel p2){
+    summon xyz as float;
+    };
 };
 
 summon p as Pixel;
@@ -24,7 +27,7 @@ summon iterate as void (float limit) {
         m = mag(z + 0+2i);
         
         if (m > limit) {
-            Print("m is too big");
+            Print(m);
             x = 100; 
         }
         
@@ -32,7 +35,7 @@ summon iterate as void (float limit) {
     }
 };
 
-summon manyparams as com (int a, int b, int c, float ab, float bc, com xy, com xz, string abcxz);
+summon manyparams as com (int a, int b, int d, float ab, float bc, com xy, com xz, string abcxz);
 
 Hello, world!
 
@@ -41,6 +44,11 @@ b2= b1 && b2;
 b1 = !T;
 z = 0.00+5i;
 z = 3.0 + 4.0i;
+z= 0                +           2i;
+x=-x;
+b1= (x<=x) ;
+b1 = b2 || (3 <4+5) && !b2;
+st= "abcdefgh" + "xyz";
 
 z = 10 +0i * 0+ 2.5i;
 z = (3+2i) / 2.0 +0i;

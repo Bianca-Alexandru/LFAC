@@ -353,6 +353,7 @@ bexp : BOOL { $$ = $1; }
      | exp GEQ exp { $$ = $1 >= $3; }
      | exp EQ exp { $$ = $1 == $3; }
      | exp NEQ exp { $$ = $1 != $3; }
+     | '(' bexp ')' { $$ = $2; }
      ;
 
 cexp : CAT { $$.real = 0; $$.imag = $1; } 
