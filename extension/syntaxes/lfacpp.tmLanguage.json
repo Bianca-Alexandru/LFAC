@@ -1,0 +1,57 @@
+{
+  "name": "LFAC",
+  "scopeName": "source.lfac",
+  "patterns": [
+    { 
+        "match": "Hello, world!|Goodbye, world!", 
+        "name": "keyword.control.world.lfac" 
+    },
+    { 
+        "match": "\\b(summon|as|of|arise)\\b|[\\(\\)\\{\\}\\[\\]=]", 
+        "name": "keyword.control.main.lfac" 
+    },
+    { 
+        "comment": "Com",
+        "match": "\\b(com)\\b|-?([0-9]*\\.[0-9]+|[0-9]+)[ \\t]*[+-][ \\t]*([0-9]*\\.[0-9]+|[0-9]+)i", 
+        "name": "constant.character.complex.lfac" 
+    },
+    { 
+        "comment": "Int/Float",
+        "match": "\\b(int|float)\\b|\\b[0-9]+(\\.[0-9]+)?\\b", 
+        "name": "constant.numeric.standard.lfac" 
+    },
+    { 
+        "comment": "Bool ",
+        "match": "\\b(bool)\\b|\\b(T|F)\\b", 
+        "name": "constant.language.boolean.lfac" 
+    },
+    { 
+        "comment": "String",
+        "patterns": [
+            {
+                "match": "\\b(string)\\b",
+                "name": "string.quoted.custom.lfac"
+            },
+            {
+                "begin": "\"", 
+                "end": "\"", 
+                "name": "string.quoted.custom.lfac"
+            }
+        ]
+    },
+    { 
+        "comment": "Operations ",
+        "match": "(=/=)|(==)|(<=)|(>=)|(&&)|(\\|\\|)|[+\\-*/%^!<>]", 
+        "name": "keyword.operator.yellow.lfac" 
+    },
+    { 
+        "match": "\\b(if|else|while|void|Print|mag|real|imag)\\b", 
+        "name": "keyword.control.lfac" 
+    },
+    {
+        "comment": "rest",
+        "match": ".",
+        "name": "variable.other.rest.lfac"
+    }
+  ]
+}

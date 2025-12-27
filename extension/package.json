@@ -1,0 +1,21 @@
+{
+  "name": "lfac-language",
+  "displayName": "LFAC Language Support",
+  "description": "Syntax highlighting for LFAC",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.70.0" },
+  "categories": [ "Programming Languages" ],
+  "contributes": {
+    "languages": [{
+      "id": "lfac",
+      "aliases": ["LFAC", "lfac"],
+      "extensions": [".lfacpp", ".txt"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "lfac",
+      "scopeName": "source.lfac",
+      "path": "./syntaxes/lfacpp.tmLanguage.json"
+    }]
+  }
+}
