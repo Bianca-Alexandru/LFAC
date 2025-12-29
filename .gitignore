@@ -1,0 +1,12 @@
+*
+!compile.sh
+!language.y
+!language.l
+!SymTable.h
+!SymTable.cpp
+!progr.txt
+!extension/
+!extension/**
+!.gitignore
+!AST.h
+!AST.cpp
