@@ -141,19 +141,7 @@ decl    : SUMMON ANYID AS TYPENAME ';' {
                                delete $4; delete $2;
                           }
                       }
-          ;    
-newscopefunc:{
-                    SymTable* newScope = new SymTable("func", current);
-                    symTables.push_back(newScope);
-                    current = newScope;
-                 }
-           ;
-newscopeclass:{
-                    SymTable* newScope = new SymTable("class", current);
-                    symTables.push_back(newScope);
-                    current = newScope;
-                 }
-           ;
+        ;
 
 fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
                     if(!current->existsIdLocal($2)) {
@@ -192,7 +180,12 @@ fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
                          for(auto p : *$6) {
                              paramTypes.push_back(p->type);
                          }
-                         current->addSym($4,$2, s, paramTypes);
+                         current->addSym($4, $2, s, paramTypes);
+                         
+                         SymTable* newScope = new SymTable($2->c_str(), current);
+                         symTables.push_back(newScope);
+                         current = newScope;
+
                          delete $4; delete $2; delete s;
                     } else {
                          errorCount++; 
@@ -200,9 +193,8 @@ fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
                          delete $4; delete $2;
                     }
               }
-              newscopefunc '{' 
+              '{' 
               {
-                    //add params in the func scope
                     vector<Param*>* params = $6;
                     for(auto p : *params) {
                         if(!current->existsIdLocal(&p->name)) {
@@ -226,22 +218,26 @@ insidefunc :
             | insidefunc statement
           ;
 classdecl : ARISE ID {
-                         if(!current->existsId($2)) {
-                              string* s = new string("class");
-                              current->addSym(s,$2, s);
-                              tempClassName = new string(*$2);
-                              delete $2; delete s;
-                              
-                         } else {
-                               errorCount++; 
-                               yyerror("Class already defined");
-                               delete $2;
-                         }
+                 if(!current->existsId($2)) {
+                      string* s = new string("class");
+                      current->addSym(s, $2, s);
+                      
+                      SymTable* newScope = new SymTable($2->c_str(), current);
+                      symTables.push_back(newScope);
+                      
+                      tempClassName = new string(*$2);
+                      current = newScope;
+                      
+                      delete $2; delete s;
+                 } else {
+                       errorCount++; 
+                       yyerror("Class already defined");
+                       delete $2;
+                 }
           }
-          newscopeclass
           '{' 
           {
-                  if(tempClassName) {
+              if(tempClassName) {
                   SymTable* parentScope = current->getParent();
                   if(parentScope) {
                       parentScope->setClassScopeForId(tempClassName, current);
@@ -249,10 +245,9 @@ classdecl : ARISE ID {
                   delete tempClassName;
                   tempClassName = NULL;
               }
-
           }
-           class_body '}' 
-          {current = current->getParent();} ';'
+          class_body '}' 
+          { current = current->getParent(); } ';'
           ;
 
 class_body : 
@@ -264,6 +259,11 @@ typed_exp : exp { $$ = $1; }
           | bexp { $$ = $1; }
           | cexp { $$ = $1; }
           | stexp { $$ = $1; }
+          | ID {
+            $$= new TypedValue();
+            $$->type = current->getType($1);
+            delete $1;
+             }
           ;
 
 exp : exp '+' exp {
