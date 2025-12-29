@@ -1,4 +1,5 @@
 #include "SymTable.h"
+#include "AST.h"
 using namespace std;
 
 IdInfo* SymTable::getId(string* s) {
@@ -100,6 +101,23 @@ string SymTable::getFieldType(string* className, string* fieldName) {
 }
 SymTable::~SymTable() {//dadea eroare ca e declarat si nefolosit
     // nimic de eliberat explicit
+}
+
+Value SymTable::getValue(string name) {
+    if (ids.count(name)) {
+        return ids[name].val; 
+    }
+    if (parent) return parent->getValue(name);
+    
+    return Value(); 
+}
+
+void SymTable::setValue(string name, Value v) {
+    if (ids.count(name)) {
+        ids[name].val = v;
+    } else if (parent) {
+        parent->setValue(name, v); 
+    }
 }
 
 
