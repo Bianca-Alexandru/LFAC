@@ -7,14 +7,22 @@ summon b1 as bool, summon b2 as bool;
 summon st as string;
 
 arise Pixel {
-summon r as float;
-summon ii as float;
-summon draw as com (Pixel p1, Pixel p2){
-    summon xyz as float;
+    summon r as float;
+    summon ii as float;
+    summon draw as com (Pixel p1, Pixel p2){
+        summon xyz as float;
     };
 };
 
 summon p as Pixel;
+
+summon testShadow as void () {
+
+    summon x as float;
+    
+    x = 5.5;
+    Print(x); 
+};
 
 summon iterate as void (float limit) {
     c = 0.35 + 0.4i;
@@ -39,6 +47,11 @@ summon manyparams as com (int a, int b, int d, float ab, float bc, com xy, com x
 
 Hello, world!
 
+
+x = 999;
+Print(x);       
+testShadow();    
+Print(x);       
 b1= 5 < 4;
 b2= b1 && b2;
 b1 = !T;
@@ -63,6 +76,5 @@ Print("Magnitude is:");
 Print(mag(3+4i));
 
 iterate(2.0);
-
 
 Goodbye, world!

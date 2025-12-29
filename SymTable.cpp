@@ -13,13 +13,14 @@ void SymTable::addSym(string* type, string*name, string* category, vector<string
     ids[*name] = var; 
 }
 
-
 bool SymTable::existsId(string* var) {
     if(ids.count(*var)) return true;
     if (parent) return parent->existsId(var);
     return false;
 }
-
+bool SymTable::existsIdLocal(string* var) {
+    return ids.count(*var) > 0;
+}
 void SymTable::setClassScopeForId(string* idName, SymTable* scope) {
     if(ids.count(*idName)) {
         ids[*idName].classScope = scope;

@@ -12,6 +12,20 @@
       string type;
       string name;
   };
+
+  struct TypedValue {
+      string type;  // "int", "float", "bool", "com", "string"
+      float floatVal;
+      int intVal;
+      bool boolVal;
+      Complex compVal;
+      string* strVal;
+      
+      TypedValue() : type(""), floatVal(0), intVal(0), boolVal(false), strVal(nullptr) {
+          compVal.real = 0;
+          compVal.imag = 0;
+      }
+  };
 }
 %define parse.error verbose
 
@@ -49,6 +63,8 @@ string* tempClassName = NULL;
      struct Complex Comp;
      struct Param* Param;
      vector<struct Param*>* ParamList;
+     struct TypedValue* TypedVal;//adaugam un nou tip pt expresii
+     vector<string>* TypeList; //pentru lista de tipuri
 }
 
 //%destructor { delete $$; } <Str> 
@@ -57,21 +73,21 @@ string* tempClassName = NULL;
 %token<Int> ZAT
 %token<Bool> BOOL
 %token<Float> QAT
-%token<Float> CAT
+%token<Comp> CAT
 %token<Str> ID TYPE STRING ID_BOOL ID_COM ID_STR ID_INT ID_FLOAT
 %token MAG REAL IMAG 
 
 %token IF ELSE WHILE
 %token PRINT
 
-%type<Float> exp
-%type<Bool> bexp
-%type<Str> stexp
+%type<TypedVal> exp bexp cexp stexp typed_exp
 %type<Str> TYPENAME
-%type<Comp> cexp
 %type<Param> param
 %type<ParamList> list_param
 %type<Str> ANYID
+%type<TypeList> call_list_typed
+
+
 %start progr
 %%
 progr :  declarations main {if (errorCount == 0) cout<< "The program is correct!" << endl;}
@@ -95,7 +111,7 @@ ANYID : ID       { $$ = $1; }
       ;
 
 decl    : SUMMON ANYID AS TYPENAME ';' { 
-                            if(!current->existsId($2)) {
+                            if(!current->existsIdLocal($2)) {
                                string* s = new string("var");
                                current->addSym($4,$2, s);
                                SymTable* classTable = current->getClassScope($4);
@@ -110,7 +126,7 @@ decl    : SUMMON ANYID AS TYPENAME ';' {
                           }
                       }
         | SUMMON ANYID AS TYPENAME ',' decl { 
-                            if(!current->existsId($2)) {
+                            if(!current->existsIdLocal($2)) {
                                string* s = new string("var");
                                current->addSym($4, $2, s);
                                SymTable* classTable = current->getClassScope($4);
@@ -140,7 +156,7 @@ newscopeclass:{
            ;
 
 fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
-                    if(!current->existsId($2)) {
+                    if(!current->existsIdLocal($2)) {
                          string* s = new string("func");
                          vector<string> paramTypes;
                          for(auto p : *$6) {
@@ -170,7 +186,7 @@ fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
           //above is simple func definition without body
           //below is func def with body and add params in scope
               | SUMMON ANYID AS TYPENAME  '(' list_param ')' {
-                    if(!current->existsId($2)) {
+                    if(!current->existsIdLocal($2)) {
                          string* s = new string("func");
                          vector<string> paramTypes;
                          for(auto p : *$6) {
@@ -189,7 +205,7 @@ fundecl : SUMMON ANYID AS TYPENAME  '(' list_param ')'{
                     //add params in the func scope
                     vector<Param*>* params = $6;
                     for(auto p : *params) {
-                        if(!current->existsId(&p->name)) {
+                        if(!current->existsIdLocal(&p->name)) {
                             string* s = new string("param");
                             current->addSym(&p->type, &p->name, s);
                             delete s;
@@ -243,29 +259,122 @@ class_body :
            | class_body decl
            | class_body fundecl
            ;
+           
+typed_exp : exp { $$ = $1; }
+          | bexp { $$ = $1; }
+          | cexp { $$ = $1; }
+          | stexp { $$ = $1; }
+          ;
 
-exp :  exp '+' exp  {//NOT relevant WILL need to change later into smth like $$ = new ASTNode("+", $1, $3);
-                    //not necessary to delete rn but will be deleted later for part4 
-     $$ = $1 + $3; }
-     | exp '-' exp {$$ = $1 - $3;}
-     | exp '*' exp  {$$ = $1 * $3;}
-     | exp '/' exp {$$ = $1 / $3;}
-     | exp '%' exp {$$ = (int)$1 % (int)$3;}
-     | exp '^' exp {$$ = pow($1,$3);}
-     | '(' exp ')' { $$ = $2; }
-     | exp'!' {$$ = 1; for(int i=1;i<=$1;i++) $$ *= i;}
-     | '-' exp %prec UMINUS { $$ = -$2; }
-     | QAT { $$ = $1; }
-     | ZAT { $$ = $1; }
-     | ID_INT OF ID { 
-        // Verificăm că obiectul există
+exp : exp '+' exp {
+        if($1->type != $3->type) {
+            errorCount++;
+            string msg = "Type mismatch in addition: " + $1->type + " + " + $3->type;
+            yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = $1->type;
+        if($1->type == "int") {
+            $$->intVal = $1->intVal + $3->intVal;
+        } else if($1->type == "float") {
+            $$->floatVal = $1->floatVal + $3->floatVal;
+        }
+        delete $1; delete $3;
+    }
+    | exp '-' exp {
+        if($1->type != $3->type) {
+            errorCount++;
+            string msg = "Type mismatch in subtraction: " + $1->type + " - " + $3->type;
+            yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = $1->type;
+        if($1->type == "int") {
+            $$->intVal = $1->intVal - $3->intVal;
+        } else if($1->type == "float") {
+            $$->floatVal = $1->floatVal - $3->floatVal;
+        }
+        delete $1; delete $3;
+    }
+    | exp '*' exp {
+        if($1->type != $3->type) {
+            errorCount++;
+            string msg = "Type mismatch in multiplication: " + $1->type + " * " + $3->type;
+            yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = $1->type;
+        if($1->type == "int") {
+            $$->intVal = $1->intVal * $3->intVal;
+        } else if($1->type == "float") {
+            $$->floatVal = $1->floatVal * $3->floatVal;
+        }
+        delete $1; delete $3;
+    }
+    | exp '/' exp {
+        if($1->type != $3->type) {
+            errorCount++;
+            string msg = "Type mismatch in division: " + $1->type + " / " + $3->type;
+            yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = $1->type;
+        if($1->type == "int") {
+            $$->intVal = ($3->intVal != 0) ? $1->intVal / $3->intVal : 0;
+        } else if($1->type == "float") {
+            $$->floatVal = ($3->floatVal != 0) ? $1->floatVal / $3->floatVal : 0;
+        }
+        delete $1; delete $3;
+    }
+    | '(' exp ')' { $$ = $2; }
+    | '-' exp %prec UMINUS {
+        $$ = new TypedValue();
+        $$->type = $2->type;
+        if($2->type == "int") {
+            $$->intVal = -$2->intVal;
+        } else if($2->type == "float") {
+            $$->floatVal = -$2->floatVal;
+        }
+        delete $2;
+    }
+    | QAT {
+        $$ = new TypedValue();
+        $$->type = "float";
+        $$->floatVal = $1;
+    }
+    | ZAT {
+        $$ = new TypedValue();
+        $$->type = "int";
+        $$->intVal = $1;
+    }
+    | ID_INT {
+        if(!current->existsId($1)) {
+            errorCount++;
+            string msg = "Variable '" + *$1 + "' not defined";
+            yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "int";
+        $$->intVal = 0;
+        delete $1;
+    }
+    | ID_FLOAT {
+        if(!current->existsId($1)) {
+            errorCount++;
+            string msg = "Variable '" + *$1 + "' not defined";
+            yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "float";
+        $$->floatVal = 0;
+        delete $1;
+    }
+    | ID_INT OF ID {
         if(!current->existsId($3)) {
             errorCount++;
             string msg = "Variable '" + *$3 + "' not defined";
             yyerror(msg.c_str());
-        }
-        // Verificăm că field-ul există în clasă
-        else {
+        } else {
             IdInfo* objInfo = current->getId($3);
             if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
                 errorCount++;
@@ -273,16 +382,17 @@ exp :  exp '+' exp  {//NOT relevant WILL need to change later into smth like $$ 
                 yyerror(msg.c_str());
             }
         }
-        $$ = 0; 
-        delete $1; delete $3; 
-     }
-     | ID_FLOAT OF ID { 
+        $$ = new TypedValue();
+        $$->type = "int";
+        $$->intVal = 0;
+        delete $1; delete $3;
+    }
+    | ID_FLOAT OF ID {
         if(!current->existsId($3)) {
             errorCount++;
             string msg = "Variable '" + *$3 + "' not defined";
             yyerror(msg.c_str());
-        }
-        else {
+        } else {
             IdInfo* objInfo = current->getId($3);
             if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
                 errorCount++;
@@ -290,144 +400,244 @@ exp :  exp '+' exp  {//NOT relevant WILL need to change later into smth like $$ 
                 yyerror(msg.c_str());
             }
         }
-        $$ = 0; 
-        delete $1; delete $3; 
-     }
-     | ID_INT { 
-        if(!current->existsId($1)) {
-            errorCount++;
-            string msg = "Variable '" + *$1 + "' not defined";
-            yyerror(msg.c_str());
-        }
-        $$ = 0; 
-        delete $1; 
-     }
-     | ID_FLOAT { 
-        if(!current->existsId($1)) {
-            errorCount++;
-            string msg = "Variable '" + *$1 + "' not defined";
-            yyerror(msg.c_str());
-        }
-        $$ = 0; 
-        delete $1; 
-     }
+        $$ = new TypedValue();
+        $$->type = "float";
+        $$->floatVal = 0;
+        delete $1; delete $3;
+    }
+    | MAG '(' cexp ')' {
+        $$ = new TypedValue();
+        $$->type = "float";
+        $$->floatVal = sqrt(pow($3->compVal.real, 2) + pow($3->compVal.imag, 2));
+        delete $3;
+    }
+    | REAL '(' cexp ')' {
+        $$ = new TypedValue();
+        $$->type = "float";
+        $$->floatVal = $3->compVal.real;
+        delete $3;
+    }
+    | IMAG '(' cexp ')' {
+        $$ = new TypedValue();
+        $$->type = "float";
+        $$->floatVal = $3->compVal.imag;
+        delete $3;
+    }
+    ;
 
-     | MAG '(' cexp ')'  { $$ = sqrt(pow($3.real, 2) + pow($3.imag, 2)); }
-     | REAL '(' cexp ')' { $$ = $3.real; }
-     | IMAG '(' cexp ')' { $$ = $3.imag; }
-     ;
-
-bexp : BOOL { $$ = $1; }
-     | ID_BOOL {
+bexp : BOOL {
+        $$ = new TypedValue();
+        $$->type = "bool";
+        $$->boolVal = $1;
+    }
+    | ID_BOOL {
         if(!current->existsId($1)) {
             errorCount++;
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$ = false; 
-        delete $1; 
-     }
-     | ID_BOOL OF ID { 
-        if(!current->existsId($3)) {
+        $$ = new TypedValue();
+        $$->type = "bool";
+        $$->boolVal = false;
+        delete $1;
+    }
+    | bexp AND bexp {
+        if($1->type != "bool" || $3->type != "bool") {
             errorCount++;
-            string msg = "Variable '" + *$3 + "' not defined";
+            yyerror("Operands of AND must be boolean");
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        $$->boolVal = $1->boolVal && $3->boolVal;
+        delete $1; delete $3;
+    }
+    | bexp OR bexp {
+        if($1->type != "bool" || $3->type != "bool") {
+            errorCount++;
+            yyerror("Operands of OR must be boolean");
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        $$->boolVal = $1->boolVal || $3->boolVal;
+        delete $1; delete $3;
+    }
+    | '!' bexp {
+        if($2->type != "bool") {
+            errorCount++;
+            yyerror("Operand of NOT must be boolean");
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        $$->boolVal = !$2->boolVal;
+        delete $2;
+    }
+    | exp '<' exp {
+        if($1->type != $3->type) {
+            errorCount++;
+            string msg = "Type mismatch in comparison: " + $1->type + " < " + $3->type;
             yyerror(msg.c_str());
         }
-        else {
-            IdInfo* objInfo = current->getId($3);
-            if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Field '" + *$1 + "' does not exist in class";
-                yyerror(msg.c_str());
-            }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        if($1->type == "int") {
+            $$->boolVal = $1->intVal < $3->intVal;
+        } else if($1->type == "float") {
+            $$->boolVal = $1->floatVal < $3->floatVal;
         }
-        $$ = false; 
-        delete $1; delete $3; 
+        delete $1; delete $3;
+    }
+    
+   | exp '>' exp { 
+        if($1->type != $3->type) {
+             errorCount++;
+             string msg = "Comparison type mismatch: " + $1->type + " > " + $3->type;
+             yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        if($1->type == "int") $$->boolVal = $1->intVal > $3->intVal;
+        else if($1->type == "float") $$->boolVal = $1->floatVal > $3->floatVal;
+        delete $1; delete $3;
      }
-     | bexp AND bexp { $$ = $1 && $3; }
-     | bexp OR bexp { $$ = $1 || $3; }
-     | '!' bexp { $$ = !$2; }
-     | exp '<' exp { $$ = $1 < $3; }
-     | exp '>' exp { $$ = $1 > $3; }
-     | exp LEQ exp { $$ = $1 <= $3; }
-     | exp GEQ exp { $$ = $1 >= $3; }
-     | exp EQ exp { $$ = $1 == $3; }
-     | exp NEQ exp { $$ = $1 != $3; }
+     | exp LEQ exp { 
+        if($1->type != $3->type) {
+             errorCount++;
+             string msg = "Comparison type mismatch: " + $1->type + " <= " + $3->type;
+             yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        if($1->type == "int") $$->boolVal = $1->intVal <= $3->intVal;
+        else if($1->type == "float") $$->boolVal = $1->floatVal <= $3->floatVal;
+        delete $1; delete $3;
+     }
+     | exp GEQ exp { 
+        if($1->type != $3->type) {
+             errorCount++;
+             string msg = "Comparison type mismatch: " + $1->type + " >= " + $3->type;
+             yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        if($1->type == "int") $$->boolVal = $1->intVal >= $3->intVal;
+        else if($1->type == "float") $$->boolVal = $1->floatVal >= $3->floatVal;
+        delete $1; delete $3;
+     }
+     | exp EQ exp { 
+        if($1->type != $3->type) {
+             errorCount++;
+             string msg = "Comparison type mismatch: " + $1->type + " == " + $3->type;
+             yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        if($1->type == "int") $$->boolVal = $1->intVal == $3->intVal;
+        else if($1->type == "float") $$->boolVal = $1->floatVal == $3->floatVal;
+        else if($1->type == "bool") $$->boolVal = $1->boolVal == $3->boolVal;
+        delete $1; delete $3;
+     }
+     | exp NEQ exp { 
+        if($1->type != $3->type) {
+             errorCount++;
+             string msg = "Comparison type mismatch: " + $1->type + " != " + $3->type;
+             yyerror(msg.c_str());
+        }
+        $$ = new TypedValue();
+        $$->type = "bool";
+        if($1->type == "int") $$->boolVal = $1->intVal != $3->intVal;
+        else if($1->type == "float") $$->boolVal = $1->floatVal != $3->floatVal;
+        else if($1->type == "bool") $$->boolVal = $1->boolVal != $3->boolVal;
+        delete $1; delete $3;
+     }
      | '(' bexp ')' { $$ = $2; }
      ;
 
-cexp : CAT { $$.real = 0; $$.imag = $1; } 
-     | ID_COM { 
+
+cexp :  CAT {
+        $$ = new TypedValue();
+        $$->type = "com";
+        $$->compVal = $1;
+    }
+        | ID_COM {
         if(!current->existsId($1)) {
             errorCount++;
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$.real = 0; $$.imag = 0; 
-        delete $1; 
+        $$ = new TypedValue();
+        $$->type = "com";
+        $$->compVal.real = 0;
+        $$->compVal.imag = 0;
+        delete $1;
+    }
+    | cexp '+' cexp {
+        $$ = new TypedValue();
+        $$->type = "com";
+        $$->compVal.real = $1->compVal.real + $3->compVal.real;
+        $$->compVal.imag = $1->compVal.imag + $3->compVal.imag;
+        delete $1; delete $3;
+    }
+    | cexp '-' cexp { 
+        $$ = new TypedValue();
+        $$->type = "com";
+        $$->compVal.real = $1->compVal.real - $3->compVal.real;
+        $$->compVal.imag = $1->compVal.imag - $3->compVal.imag;
+        delete $1; delete $3;
      }
-     | ID_COM OF ID { 
-        if(!current->existsId($3)) {
-            errorCount++;
-            string msg = "Variable '" + *$3 + "' not defined";
-            yyerror(msg.c_str());
-        }
-        else {
-            IdInfo* objInfo = current->getId($3);
-            if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Field '" + *$1 + "' does not exist in class";
-                yyerror(msg.c_str());
-            }
-        }
-        $$.real = 0; $$.imag = 0; 
-        delete $1; delete $3; 
-     }
-     | cexp '+' cexp { $$.real = $1.real + $3.real; $$.imag = $1.imag + $3.imag; }
-     | cexp '-' cexp { $$.real = $1.real - $3.real; $$.imag = $1.imag - $3.imag; }
      | cexp '*' cexp { //DOES NOT NEED  () 
           // 10+0i * 2+3i is accepted by this language as (10+0i)*(2+3i)
-          $$.real = ($1.real * $3.real) - ($1.imag * $3.imag);
-          $$.imag = ($1.real * $3.imag) + ($1.imag * $3.real);
+        $$ = new TypedValue();
+        $$->type = "com";
+        // Formula înmulțirii: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
+        $$->compVal.real = ($1->compVal.real * $3->compVal.real) - ($1->compVal.imag * $3->compVal.imag);
+        $$->compVal.imag = ($1->compVal.real * $3->compVal.imag) + ($1->compVal.imag * $3->compVal.real);
+        delete $1; delete $3;
      }
-     | cexp '/' cexp { 
-          float denom = ($3.real * $3.real) + ($3.imag * $3.imag);
-          $$.real = (($1.real * $3.real) + ($1.imag * $3.imag)) / denom;
-          $$.imag = (($1.imag * $3.real) - ($1.real * $3.imag)) / denom;
+    | cexp '/' cexp { 
+        $$ = new TypedValue();
+        $$->type = "com";
+        // Formula împărțirii numerelor complexe
+        float denom = ($3->compVal.real * $3->compVal.real) + ($3->compVal.imag * $3->compVal.imag);
+        if (denom == 0) {
+            // Putem semnala o eroare la runtime/compile time pt impartire la zero
+             // errorCount++; yyerror("Division by zero in complex number");
+             $$->compVal.real = 0;
+             $$->compVal.imag = 0;
+        } else {
+            $$->compVal.real = (($1->compVal.real * $3->compVal.real) + ($1->compVal.imag * $3->compVal.imag)) / denom;
+            $$->compVal.imag = (($1->compVal.imag * $3->compVal.real) - ($1->compVal.real * $3->compVal.imag)) / denom;
+        }
+        delete $1; delete $3;
      }
-     | '(' cexp ')' { $$.real = $2.real; $$.imag = $2.imag; }
+     | '(' cexp ')' { 
+        $$ = $2; 
+     }
      ;
 
-stexp : STRING { $$ = $1; }
-     | ID_STR { 
+stexp : STRING {
+        $$ = new TypedValue();
+        $$->type = "string";
+        $$->strVal = $1;
+    }
+    | ID_STR {
         if(!current->existsId($1)) {
             errorCount++;
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
-        }     
-        $$ = new string(""); 
-        delete $1; 
-     }
-     | ID_STR OF ID { 
-        if(!current->existsId($3)) {
-            errorCount++;
-            string msg = "Variable '" + *$3 + "' not defined";
-            yyerror(msg.c_str());
         }
-        else {
-            IdInfo* objInfo = current->getId($3);
-            if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Field '" + *$1 + "' does not exist in class";
-                yyerror(msg.c_str());
-            }
-        }
-        $$ = new string(""); 
-        delete $1; delete $3; 
-     }
-     | stexp '+' stexp { $$ = new string(*$1 + *$3); delete $1; delete $3; }
-     ;
-
+        $$ = new TypedValue();
+        $$->type = "string";
+        $$->strVal = new string("");
+        delete $1;
+    }
+    | stexp '+' stexp {
+        $$ = new TypedValue();
+        $$->type = "string";
+        $$->strVal = new string(*($1->strVal) + *($3->strVal));
+        delete $1->strVal; delete $3->strVal;
+        delete $1; delete $3;
+    }
+    ;
 list_param : //empty
                 {
                 $$= new vector<Param*>();
@@ -468,72 +678,317 @@ statement
     ;
 
 simple_statement
-    : ID_INT ASSIGN exp
-    | ID_FLOAT ASSIGN exp
-    | ID_BOOL ASSIGN bexp
-    | ID_STR ASSIGN stexp
-    | ID_COM ASSIGN cexp
+   : ID_INT ASSIGN exp {
+        if($3->type != "int") {
+            errorCount++;
+            string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to int variable";
+            yyerror(msg.c_str());
+        }
+        delete $3;
+    }
+    | ID_FLOAT ASSIGN exp {
+        if($3->type != "float") {
+            errorCount++;
+            string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to float variable";
+            yyerror(msg.c_str());
+        }
+        delete $3;
+    }
+    | ID_BOOL ASSIGN bexp {
+        if($3->type != "bool") {
+            errorCount++;
+            string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to bool variable";
+            yyerror(msg.c_str());
+        }
+        delete $3;
+    }
+    | ID_STR ASSIGN stexp {
+        if($3->type != "string") {
+            errorCount++;
+            string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to string variable";
+            yyerror(msg.c_str());
+        }
+        delete $3->strVal;
+        delete $3;
+    }
+    | ID_COM ASSIGN cexp {
+        if($3->type != "com") {
+            errorCount++;
+            string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to com variable";
+            yyerror(msg.c_str());
+        }
+        delete $3;
+    }
+    | ID OF ID ASSIGN typed_exp {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+            else {
+                string fieldType = info->classScope->getType($1);
+                if (fieldType != $5->type) {
+                     errorCount++;
+                     string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
+                     yyerror(msg.c_str());
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_INT OF ID ASSIGN typed_exp {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+            else {
+                string fieldType = info->classScope->getType($1);
+                if (fieldType != $5->type) {
+                     errorCount++;
+                     string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
+                     yyerror(msg.c_str());
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_FLOAT OF ID ASSIGN typed_exp {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+            else {
+                string fieldType = info->classScope->getType($1);
+                if (fieldType != $5->type) {
+                     errorCount++;
+                     string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
+                     yyerror(msg.c_str());
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_BOOL OF ID ASSIGN typed_exp {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+            else {
+                string fieldType = info->classScope->getType($1);
+                if (fieldType != $5->type) {
+                     errorCount++;
+                     string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
+                     yyerror(msg.c_str());
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_COM OF ID ASSIGN typed_exp {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+            else {
+                string fieldType = info->classScope->getType($1);
+                if (fieldType != $5->type) {
+                     errorCount++;
+                     string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
+                     yyerror(msg.c_str());
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_STR OF ID ASSIGN typed_exp {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+            else {
+                string fieldType = info->classScope->getType($1);
+                if (fieldType != $5->type) {
+                     errorCount++;
+                     string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
+                     yyerror(msg.c_str());
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+
     /*| ID ASSIGN exp
     | ID ASSIGN cexp
     | ID ASSIGN stexp
     | ID ASSIGN bexp*/ //not yet declared variables get generic id
     //can remove comment later after the semantic checks that the variable exists 
-    | ID '(' call_list ')' { 
-     if(!current->existsId($1)) {
-        errorCount++;
-        string msg = "Function '" + *$1 + "' not defined";
-        yyerror(msg.c_str());
-     }
-     delete $1; 
-     }
-    | ANYID OF ANYID ASSIGN exp {
-        // ANYID permite orice tip de ID (ID, ID_INT, ID_FLOAT, etc.)
-        if(!current->existsId($3)) {
+    | ID '(' call_list_typed ')' { 
+        if(!current->existsId($1)) {
             errorCount++;
-            yyerror("Object not defined");
+            string msg = "Function '" + *$1 + "' not defined";
+            yyerror(msg.c_str());
         } else {
-            IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
-            
-            if (!info->classScope) {
-                errorCount++;
-                string msg = "Variable '" + *$3 + "' is not a class instance";
-                yyerror(msg.c_str());
-            }
-            else if (!info->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Field '" + *$1 + "' does not exist in class '" + objType + "'";
-                yyerror(msg.c_str());
+            // Verifică tipurile parametrilor
+            IdInfo* funcInfo = current->getId($1);
+            if(funcInfo && funcInfo->category == "func") {
+                vector<string>& expectedTypes = funcInfo->params;
+                vector<string>& actualTypes = *$3;
+                
+                if(expectedTypes.size() != actualTypes.size()) {
+                    errorCount++;
+                    string msg = "Function '" + *$1 + "' expects " + 
+                                to_string(expectedTypes.size()) + " parameters, but " +
+                                to_string(actualTypes.size()) + " were provided";
+                    yyerror(msg.c_str());
+                } else {
+                    // Verifică fiecare parametru
+                    for(size_t i = 0; i < expectedTypes.size(); i++) {
+                        if(expectedTypes[i] != actualTypes[i]) {
+                            errorCount++;
+                            string msg = "Parameter " + to_string(i+1) + 
+                                        " type mismatch: expected " + expectedTypes[i] +
+                                        ", got " + actualTypes[i];
+                            yyerror(msg.c_str());
+                        }
+                    }
+                }
             }
         }
-        delete $1; delete $3;
+        delete $1;
+        delete $3;
     }
-    | ANYID OF ANYID '(' call_list ')' {
-        if(!current->existsId($3)) {
-            errorCount++;
-            yyerror("Object not defined");
-        } else {
+    
+    /* --- INCEPUT BLOC NOU PENTRU METODE --- */
+    | ID OF ID '(' call_list_typed ')' {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
             IdInfo* info = current->getId($3);
             string objType = current->getType($3);
-            
-            if (!info->classScope) {
-                errorCount++;
-                string msg = "Variable '" + *$3 + "' is not a class instance";
-                yyerror(msg.c_str());
-            }
-            else if (!info->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Method '" + *$1 + "' does not exist in class '" + objType + "'";
-                yyerror(msg.c_str());
+            if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
+            else {
+                IdInfo* methodInfo = info->classScope->getId($1);
+                if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
+                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                else {
+                    for(size_t i=0; i<methodInfo->params.size(); i++) {
+                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    }
+                }
             }
         }
-        delete $1; delete $3;
+        delete $1; delete $3; delete $5;
     }
-
-    | PRINT '(' exp ')'
-    | PRINT '(' stexp ')'
-    | PRINT '(' cexp ')'
-    | PRINT '(' bexp ')'
+    | ID_INT OF ID '(' call_list_typed ')' {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
+            else {
+                IdInfo* methodInfo = info->classScope->getId($1);
+                if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
+                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                else {
+                    for(size_t i=0; i<methodInfo->params.size(); i++) {
+                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    }
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_FLOAT OF ID '(' call_list_typed ')' {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
+            else {
+                IdInfo* methodInfo = info->classScope->getId($1);
+                if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
+                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                else {
+                    for(size_t i=0; i<methodInfo->params.size(); i++) {
+                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    }
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_BOOL OF ID '(' call_list_typed ')' {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
+            else {
+                IdInfo* methodInfo = info->classScope->getId($1);
+                if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
+                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                else {
+                    for(size_t i=0; i<methodInfo->params.size(); i++) {
+                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    }
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_COM OF ID '(' call_list_typed ')' {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
+            else {
+                IdInfo* methodInfo = info->classScope->getId($1);
+                if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
+                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                else {
+                    for(size_t i=0; i<methodInfo->params.size(); i++) {
+                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    }
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    | ID_STR OF ID '(' call_list_typed ')' {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            string objType = current->getType($3);
+            if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
+            else {
+                IdInfo* methodInfo = info->classScope->getId($1);
+                if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
+                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                else {
+                    for(size_t i=0; i<methodInfo->params.size(); i++) {
+                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    }
+                }
+            }
+        }
+        delete $1; delete $3; delete $5;
+    }
+    
+    | PRINT '(' exp ')' { delete $3; }
+    | PRINT '(' stexp ')' { delete $3->strVal; delete $3; }
+    | PRINT '(' cexp ')' { delete $3; }
+    | PRINT '(' bexp ')' { delete $3; }
     ;
 
 block
@@ -549,11 +1004,21 @@ while_statement
     : WHILE '(' bexp ')' block
     ;
 
+call_list_typed : /* empty */ {
+                    $$ = new vector<string>();
+                }
+                | typed_exp { 
+                    $$ = new vector<string>();
+                    $$->push_back($1->type);
+                    delete $1;
+                }
+                | call_list_typed ',' typed_exp { 
+                    $$ = $1;
+                    $$->push_back($3->type);
+                    delete $3;
+                }
+                ;
 
-call_list : 
-           |exp
-           | call_list ',' exp
-           ;
 %%
 void yyerror(const char * s){
      cout << "error:" << s << " at line: " << yylineno << endl;

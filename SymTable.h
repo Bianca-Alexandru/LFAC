@@ -24,9 +24,10 @@ class SymTable {
 
 public:
     SymTable(const char* name, SymTable* parent = NULL) :  name(name), parent(parent) {}
-    bool existsId(string* s);
-    void addSym(string* type, string* name, string* category, vector<string> params = {});
     void printVars();
+    bool existsId(string* s);
+    bool existsIdLocal(string* s); 
+    void addSym(string* type, string* name, string* category, vector<string> params = {});
     SymTable* getParent() { return parent; }
     string getType(string* name);
     string getName() {return name;}//name există, dar este privat

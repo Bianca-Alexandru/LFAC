@@ -10,6 +10,7 @@ Scope: global (Root)
    Symbol: manyparams     | Category: func | Type: com   | Param Types: [int, int, int, float, float, com, com, string]
    Symbol: p              | Category: var  | Type: Pixel
    Symbol: st             | Category: var  | Type: string
+   Symbol: testShadow     | Category: func | Type: void 
    Symbol: x              | Category: var  | Type: int  
    Symbol: z              | Category: var  | Type: com  
 
@@ -22,6 +23,9 @@ Scope: func (Parent: class)
    Symbol: p1             | Category: param| Type: Pixel
    Symbol: p2             | Category: param| Type: Pixel
    Symbol: xyz            | Category: var  | Type: float
+
+Scope: func (Parent: global)
+   Symbol: x              | Category: var  | Type: float
 
 Scope: func (Parent: global)
    Symbol: limit          | Category: param| Type: float
