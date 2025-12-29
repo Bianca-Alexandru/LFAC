@@ -3,7 +3,8 @@ summon c as com;
 summon m as float;
 summon i as com;
 summon x as int;
-summon b1 as bool, summon b2 as bool;
+summon b1 as bool;
+summon b2 as bool;
 summon st as string;
 
 arise Pixel {

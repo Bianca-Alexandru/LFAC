@@ -2,6 +2,7 @@
   #include <string>
   #include <cmath>
   #include <vector>
+  #include "AST.h"
   using namespace std;
 
   struct Complex {
@@ -11,20 +12,6 @@
   struct Param {
       string type;
       string name;
-  };
-
-  struct TypedValue {
-      string type;  // "int", "float", "bool", "com", "string"
-      float floatVal;
-      int intVal;
-      bool boolVal;
-      Complex compVal;
-      string* strVal;
-      
-      TypedValue() : type(""), floatVal(0), intVal(0), boolVal(false), strVal(nullptr) {
-          compVal.real = 0;
-          compVal.imag = 0;
-      }
   };
 }
 %define parse.error verbose
@@ -63,7 +50,8 @@ string* tempClassName = NULL;
      struct Complex Comp;
      struct Param* Param;
      vector<struct Param*>* ParamList;
-     struct TypedValue* TypedVal;//adaugam un nou tip pt expresii
+     class ASTNode* AST;
+     vector<class ASTNode*>* ASTList;
      vector<string>* TypeList; //pentru lista de tipuri
 }
 
@@ -80,7 +68,8 @@ string* tempClassName = NULL;
 %token IF ELSE WHILE
 %token PRINT
 
-%type<TypedVal> exp bexp cexp stexp typed_exp
+%type<AST> exp bexp cexp stexp typed_exp simple_statement statement
+%type<ASTList> list
 %type<Str> TYPENAME
 %type<Param> param
 %type<ParamList> list_param
@@ -118,22 +107,6 @@ decl    : SUMMON ANYID AS TYPENAME ';' {
                                if(classTable) {
                                     current->setClassScopeForId($2, classTable);
     }
-                                delete $4; delete $2; delete s;
-                          } else {
-                               errorCount++; 
-                               yyerror("Variable already defined");
-                               delete $4; delete $2;
-                          }
-                      }
-        | SUMMON ANYID AS TYPENAME ',' decl { 
-                            if(!current->existsIdLocal($2)) {
-                               string* s = new string("var");
-                               current->addSym($4, $2, s);
-                               SymTable* classTable = current->getClassScope($4);
-                               if(classTable) {
-                                     current->setClassScopeForId($2, classTable);
-                                  }
-    
                                 delete $4; delete $2; delete s;
                           } else {
                                errorCount++; 
@@ -260,8 +233,7 @@ typed_exp : exp { $$ = $1; }
           | cexp { $$ = $1; }
           | stexp { $$ = $1; }
           | ID {
-            $$= new TypedValue();
-            $$->type = current->getType($1);
+            $$ = new ASTNode(*$1, current->getType($1));
             delete $1;
              }
           ;
@@ -272,14 +244,8 @@ exp : exp '+' exp {
             string msg = "Type mismatch in addition: " + $1->type + " + " + $3->type;
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("+", $1, $3);
         $$->type = $1->type;
-        if($1->type == "int") {
-            $$->intVal = $1->intVal + $3->intVal;
-        } else if($1->type == "float") {
-            $$->floatVal = $1->floatVal + $3->floatVal;
-        }
-        delete $1; delete $3;
     }
     | exp '-' exp {
         if($1->type != $3->type) {
@@ -287,14 +253,8 @@ exp : exp '+' exp {
             string msg = "Type mismatch in subtraction: " + $1->type + " - " + $3->type;
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("-", $1, $3);
         $$->type = $1->type;
-        if($1->type == "int") {
-            $$->intVal = $1->intVal - $3->intVal;
-        } else if($1->type == "float") {
-            $$->floatVal = $1->floatVal - $3->floatVal;
-        }
-        delete $1; delete $3;
     }
     | exp '*' exp {
         if($1->type != $3->type) {
@@ -302,14 +262,8 @@ exp : exp '+' exp {
             string msg = "Type mismatch in multiplication: " + $1->type + " * " + $3->type;
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("*", $1, $3);
         $$->type = $1->type;
-        if($1->type == "int") {
-            $$->intVal = $1->intVal * $3->intVal;
-        } else if($1->type == "float") {
-            $$->floatVal = $1->floatVal * $3->floatVal;
-        }
-        delete $1; delete $3;
     }
     | exp '/' exp {
         if($1->type != $3->type) {
@@ -317,35 +271,19 @@ exp : exp '+' exp {
             string msg = "Type mismatch in division: " + $1->type + " / " + $3->type;
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("/", $1, $3);
         $$->type = $1->type;
-        if($1->type == "int") {
-            $$->intVal = ($3->intVal != 0) ? $1->intVal / $3->intVal : 0;
-        } else if($1->type == "float") {
-            $$->floatVal = ($3->floatVal != 0) ? $1->floatVal / $3->floatVal : 0;
-        }
-        delete $1; delete $3;
     }
     | '(' exp ')' { $$ = $2; }
     | '-' exp %prec UMINUS {
-        $$ = new TypedValue();
+        $$ = new ASTNode("-", nullptr, $2);
         $$->type = $2->type;
-        if($2->type == "int") {
-            $$->intVal = -$2->intVal;
-        } else if($2->type == "float") {
-            $$->floatVal = -$2->floatVal;
-        }
-        delete $2;
     }
     | QAT {
-        $$ = new TypedValue();
-        $$->type = "float";
-        $$->floatVal = $1;
+        $$ = new ASTNode(Value($1));
     }
     | ZAT {
-        $$ = new TypedValue();
-        $$->type = "int";
-        $$->intVal = $1;
+        $$ = new ASTNode(Value($1));
     }
     | ID_INT {
         if(!current->existsId($1)) {
@@ -353,9 +291,7 @@ exp : exp '+' exp {
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
-        $$->type = "int";
-        $$->intVal = 0;
+        $$ = new ASTNode(*$1, "int");
         delete $1;
     }
     | ID_FLOAT {
@@ -364,9 +300,7 @@ exp : exp '+' exp {
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
-        $$->type = "float";
-        $$->floatVal = 0;
+        $$ = new ASTNode(*$1, "float");
         delete $1;
     }
     | ID_INT OF ID {
@@ -382,9 +316,7 @@ exp : exp '+' exp {
                 yyerror(msg.c_str());
             }
         }
-        $$ = new TypedValue();
-        $$->type = "int";
-        $$->intVal = 0;
+        $$ = new ASTNode(*$1 + " OF " + *$3, "int");
         delete $1; delete $3;
     }
     | ID_FLOAT OF ID {
@@ -400,35 +332,26 @@ exp : exp '+' exp {
                 yyerror(msg.c_str());
             }
         }
-        $$ = new TypedValue();
-        $$->type = "float";
-        $$->floatVal = 0;
+        $$ = new ASTNode(*$1 + " OF " + *$3, "float");
         delete $1; delete $3;
     }
     | MAG '(' cexp ')' {
-        $$ = new TypedValue();
+        $$ = new ASTNode("MAG", $3, nullptr);
         $$->type = "float";
-        $$->floatVal = sqrt(pow($3->compVal.real, 2) + pow($3->compVal.imag, 2));
-        delete $3;
     }
     | REAL '(' cexp ')' {
-        $$ = new TypedValue();
+        $$ = new ASTNode("REAL", $3, nullptr);
         $$->type = "float";
-        $$->floatVal = $3->compVal.real;
-        delete $3;
     }
     | IMAG '(' cexp ')' {
-        $$ = new TypedValue();
+        $$ = new ASTNode("IMAG", $3, nullptr);
         $$->type = "float";
-        $$->floatVal = $3->compVal.imag;
-        delete $3;
     }
+    ;
     ;
 
 bexp : BOOL {
-        $$ = new TypedValue();
-        $$->type = "bool";
-        $$->boolVal = $1;
+        $$ = new ASTNode(Value($1));
     }
     | ID_BOOL {
         if(!current->existsId($1)) {
@@ -436,9 +359,7 @@ bexp : BOOL {
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
-        $$->type = "bool";
-        $$->boolVal = false;
+        $$ = new ASTNode(*$1, "bool");
         delete $1;
     }
     | bexp AND bexp {
@@ -446,30 +367,24 @@ bexp : BOOL {
             errorCount++;
             yyerror("Operands of AND must be boolean");
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("&&", $1, $3);
         $$->type = "bool";
-        $$->boolVal = $1->boolVal && $3->boolVal;
-        delete $1; delete $3;
     }
     | bexp OR bexp {
         if($1->type != "bool" || $3->type != "bool") {
             errorCount++;
             yyerror("Operands of OR must be boolean");
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("||", $1, $3);
         $$->type = "bool";
-        $$->boolVal = $1->boolVal || $3->boolVal;
-        delete $1; delete $3;
     }
     | '!' bexp {
         if($2->type != "bool") {
             errorCount++;
             yyerror("Operand of NOT must be boolean");
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("!", $2, nullptr);
         $$->type = "bool";
-        $$->boolVal = !$2->boolVal;
-        delete $2;
     }
     | exp '<' exp {
         if($1->type != $3->type) {
@@ -477,14 +392,8 @@ bexp : BOOL {
             string msg = "Type mismatch in comparison: " + $1->type + " < " + $3->type;
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("<", $1, $3);
         $$->type = "bool";
-        if($1->type == "int") {
-            $$->boolVal = $1->intVal < $3->intVal;
-        } else if($1->type == "float") {
-            $$->boolVal = $1->floatVal < $3->floatVal;
-        }
-        delete $1; delete $3;
     }
     
    | exp '>' exp { 
@@ -493,11 +402,8 @@ bexp : BOOL {
              string msg = "Comparison type mismatch: " + $1->type + " > " + $3->type;
              yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode(">", $1, $3);
         $$->type = "bool";
-        if($1->type == "int") $$->boolVal = $1->intVal > $3->intVal;
-        else if($1->type == "float") $$->boolVal = $1->floatVal > $3->floatVal;
-        delete $1; delete $3;
      }
      | exp LEQ exp { 
         if($1->type != $3->type) {
@@ -505,11 +411,8 @@ bexp : BOOL {
              string msg = "Comparison type mismatch: " + $1->type + " <= " + $3->type;
              yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("<=", $1, $3);
         $$->type = "bool";
-        if($1->type == "int") $$->boolVal = $1->intVal <= $3->intVal;
-        else if($1->type == "float") $$->boolVal = $1->floatVal <= $3->floatVal;
-        delete $1; delete $3;
      }
      | exp GEQ exp { 
         if($1->type != $3->type) {
@@ -517,11 +420,8 @@ bexp : BOOL {
              string msg = "Comparison type mismatch: " + $1->type + " >= " + $3->type;
              yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode(">=", $1, $3);
         $$->type = "bool";
-        if($1->type == "int") $$->boolVal = $1->intVal >= $3->intVal;
-        else if($1->type == "float") $$->boolVal = $1->floatVal >= $3->floatVal;
-        delete $1; delete $3;
      }
      | exp EQ exp { 
         if($1->type != $3->type) {
@@ -529,12 +429,8 @@ bexp : BOOL {
              string msg = "Comparison type mismatch: " + $1->type + " == " + $3->type;
              yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("==", $1, $3);
         $$->type = "bool";
-        if($1->type == "int") $$->boolVal = $1->intVal == $3->intVal;
-        else if($1->type == "float") $$->boolVal = $1->floatVal == $3->floatVal;
-        else if($1->type == "bool") $$->boolVal = $1->boolVal == $3->boolVal;
-        delete $1; delete $3;
      }
      | exp NEQ exp { 
         if($1->type != $3->type) {
@@ -542,21 +438,15 @@ bexp : BOOL {
              string msg = "Comparison type mismatch: " + $1->type + " != " + $3->type;
              yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
+        $$ = new ASTNode("!=", $1, $3);
         $$->type = "bool";
-        if($1->type == "int") $$->boolVal = $1->intVal != $3->intVal;
-        else if($1->type == "float") $$->boolVal = $1->floatVal != $3->floatVal;
-        else if($1->type == "bool") $$->boolVal = $1->boolVal != $3->boolVal;
-        delete $1; delete $3;
      }
      | '(' bexp ')' { $$ = $2; }
      ;
 
 
 cexp :  CAT {
-        $$ = new TypedValue();
-        $$->type = "com";
-        $$->compVal = $1;
+        $$ = new ASTNode(Value($1.real, $1.imag));
     }
         | ID_COM {
         if(!current->existsId($1)) {
@@ -564,50 +454,25 @@ cexp :  CAT {
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
-        $$->type = "com";
-        $$->compVal.real = 0;
-        $$->compVal.imag = 0;
+        $$ = new ASTNode(*$1, "com");
         delete $1;
     }
     | cexp '+' cexp {
-        $$ = new TypedValue();
+        $$ = new ASTNode("+", $1, $3);
         $$->type = "com";
-        $$->compVal.real = $1->compVal.real + $3->compVal.real;
-        $$->compVal.imag = $1->compVal.imag + $3->compVal.imag;
-        delete $1; delete $3;
     }
     | cexp '-' cexp { 
-        $$ = new TypedValue();
+        $$ = new ASTNode("-", $1, $3);
         $$->type = "com";
-        $$->compVal.real = $1->compVal.real - $3->compVal.real;
-        $$->compVal.imag = $1->compVal.imag - $3->compVal.imag;
-        delete $1; delete $3;
      }
      | cexp '*' cexp { //DOES NOT NEED  () 
           // 10+0i * 2+3i is accepted by this language as (10+0i)*(2+3i)
-        $$ = new TypedValue();
+        $$ = new ASTNode("*", $1, $3);
         $$->type = "com";
-        // Formula înmulțirii: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
-        $$->compVal.real = ($1->compVal.real * $3->compVal.real) - ($1->compVal.imag * $3->compVal.imag);
-        $$->compVal.imag = ($1->compVal.real * $3->compVal.imag) + ($1->compVal.imag * $3->compVal.real);
-        delete $1; delete $3;
      }
     | cexp '/' cexp { 
-        $$ = new TypedValue();
+        $$ = new ASTNode("/", $1, $3);
         $$->type = "com";
-        // Formula împărțirii numerelor complexe
-        float denom = ($3->compVal.real * $3->compVal.real) + ($3->compVal.imag * $3->compVal.imag);
-        if (denom == 0) {
-            // Putem semnala o eroare la runtime/compile time pt impartire la zero
-             // errorCount++; yyerror("Division by zero in complex number");
-             $$->compVal.real = 0;
-             $$->compVal.imag = 0;
-        } else {
-            $$->compVal.real = (($1->compVal.real * $3->compVal.real) + ($1->compVal.imag * $3->compVal.imag)) / denom;
-            $$->compVal.imag = (($1->compVal.imag * $3->compVal.real) - ($1->compVal.real * $3->compVal.imag)) / denom;
-        }
-        delete $1; delete $3;
      }
      | '(' cexp ')' { 
         $$ = $2; 
@@ -615,9 +480,8 @@ cexp :  CAT {
      ;
 
 stexp : STRING {
-        $$ = new TypedValue();
-        $$->type = "string";
-        $$->strVal = $1;
+        $$ = new ASTNode(Value(*$1));
+        delete $1;
     }
     | ID_STR {
         if(!current->existsId($1)) {
@@ -625,17 +489,12 @@ stexp : STRING {
             string msg = "Variable '" + *$1 + "' not defined";
             yyerror(msg.c_str());
         }
-        $$ = new TypedValue();
-        $$->type = "string";
-        $$->strVal = new string("");
+        $$ = new ASTNode(*$1, "string");
         delete $1;
     }
     | stexp '+' stexp {
-        $$ = new TypedValue();
+        $$ = new ASTNode("+", $1, $3);
         $$->type = "string";
-        $$->strVal = new string(*($1->strVal) + *($3->strVal));
-        delete $1->strVal; delete $3->strVal;
-        delete $1; delete $3;
     }
     ;
 list_param : //empty
@@ -664,17 +523,32 @@ param : TYPENAME ANYID
       ; 
       
 
-main : BEGIN_MAIN list END_MAIN  
+main : BEGIN_MAIN list END_MAIN {
+    if (errorCount == 0) {
+        for (ASTNode* node : *$2) {
+            if (node != nullptr) {
+                node->eval(current);
+            }
+        }
+    }
+}
      ;
      
 list: //empty
+    {
+        $$ = new vector<ASTNode*>();
+    }
     | list statement
+    {
+        $$ = $1;
+        if ($2 != nullptr) $$->push_back($2);
+    }
     ;
 
 statement
-    : simple_statement ';'
-    | if_statement
-    | while_statement
+    : simple_statement ';' { $$ = $1; }
+    | if_statement { $$ = nullptr; }
+    | while_statement { $$ = nullptr; }
     ;
 
 simple_statement
@@ -684,7 +558,9 @@ simple_statement
             string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to int variable";
             yyerror(msg.c_str());
         }
-        delete $3;
+        ASTNode* leftVar = new ASTNode(*$1, "int");
+        $$ = new ASTNode(":=", leftVar, $3);
+        delete $1;
     }
     | ID_FLOAT ASSIGN exp {
         if($3->type != "float") {
@@ -692,7 +568,9 @@ simple_statement
             string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to float variable";
             yyerror(msg.c_str());
         }
-        delete $3;
+        ASTNode* leftVar = new ASTNode(*$1, "float");
+        $$ = new ASTNode(":=", leftVar, $3);
+        delete $1;
     }
     | ID_BOOL ASSIGN bexp {
         if($3->type != "bool") {
@@ -700,7 +578,9 @@ simple_statement
             string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to bool variable";
             yyerror(msg.c_str());
         }
-        delete $3;
+        ASTNode* leftVar = new ASTNode(*$1, "bool");
+        $$ = new ASTNode(":=", leftVar, $3);
+        delete $1;
     }
     | ID_STR ASSIGN stexp {
         if($3->type != "string") {
@@ -708,8 +588,9 @@ simple_statement
             string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to string variable";
             yyerror(msg.c_str());
         }
-        delete $3->strVal;
-        delete $3;
+        ASTNode* leftVar = new ASTNode(*$1, "string");
+        $$ = new ASTNode(":=", leftVar, $3);
+        delete $1;
     }
     | ID_COM ASSIGN cexp {
         if($3->type != "com") {
@@ -717,7 +598,9 @@ simple_statement
             string msg = "Type mismatch in assignment: cannot assign " + $3->type + " to com variable";
             yyerror(msg.c_str());
         }
-        delete $3;
+        ASTNode* leftVar = new ASTNode(*$1, "com");
+        $$ = new ASTNode(":=", leftVar, $3);
+        delete $1;
     }
     | ID OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -734,7 +617,8 @@ simple_statement
                 }
             }
         }
-        delete $1; delete $3; delete $5;
+        delete $1; delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_INT OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -751,7 +635,8 @@ simple_statement
                 }
             }
         }
-        delete $1; delete $3; delete $5;
+        delete $1; delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_FLOAT OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -768,7 +653,8 @@ simple_statement
                 }
             }
         }
-        delete $1; delete $3; delete $5;
+        delete $1; delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_BOOL OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -785,7 +671,8 @@ simple_statement
                 }
             }
         }
-        delete $1; delete $3; delete $5;
+        delete $1; delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_COM OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -802,7 +689,8 @@ simple_statement
                 }
             }
         }
-        delete $1; delete $3; delete $5;
+        delete $1; delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_STR OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -819,7 +707,8 @@ simple_statement
                 }
             }
         }
-        delete $1; delete $3; delete $5;
+        delete $1; delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
 
     /*| ID ASSIGN exp
@@ -861,6 +750,7 @@ simple_statement
         }
         delete $1;
         delete $3;
+        $$ = nullptr; // Not required for AST yet
     }
     
     /* --- INCEPUT BLOC NOU PENTRU METODE --- */
@@ -883,6 +773,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_INT OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -903,6 +794,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_FLOAT OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -923,6 +815,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_BOOL OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -943,6 +836,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_COM OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -963,6 +857,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
+        $$ = nullptr; // Not required for AST yet
     }
     | ID_STR OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -983,12 +878,13 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
+        $$ = nullptr; // Not required for AST yet
     }
     
-    | PRINT '(' exp ')' { delete $3; }
-    | PRINT '(' stexp ')' { delete $3->strVal; delete $3; }
-    | PRINT '(' cexp ')' { delete $3; }
-    | PRINT '(' bexp ')' { delete $3; }
+    | PRINT '(' exp ')' { $$ = new ASTNode("Print", $3, nullptr); }
+    | PRINT '(' stexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
+    | PRINT '(' cexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
+    | PRINT '(' bexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
     ;
 
 block
