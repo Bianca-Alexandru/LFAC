@@ -67,7 +67,7 @@ string* tempClassName = NULL;
 %token IF ELSE WHILE
 %token PRINT
 
-%type<AST> exp bexp cexp stexp typed_exp simple_statement statement
+%type<AST> exp bexp cexp stexp typed_exp simple_statement statement block if_statement while_statement stmt_list
 %type<ASTList> list
 %type<Str> TYPENAME
 %type<Param> param
@@ -595,10 +595,20 @@ list: // empty
     }
     ;
 
+stmt_list: /* empty */ 
+    {
+        $$ = nullptr;
+    }
+    | statement stmt_list 
+    {
+        $$ = new ASTNode("BLOCK", $1, $2);
+    }
+    ;
+
 statement
     : simple_statement ';' { $$ = $1; } 
-    | if_statement { $$ = nullptr; } //null ast for if while
-    | while_statement { $$ = nullptr; } 
+    | if_statement { $$ = $1; } 
+    | while_statement { $$ = $1; } 
     ;
 
 simple_statement
@@ -983,16 +993,16 @@ simple_statement
     ;
 
 block
-    : '{' list '}'
+    : '{' stmt_list '}' { $$ = $2; }
     ;
 
 if_statement
-    : IF '(' bexp ')' block
-    | IF '(' bexp ')' block ELSE block
+    : IF '(' bexp ')' block { $$ = new ASTNode("IF", $3, $5); }
+    | IF '(' bexp ')' block ELSE block { $$ = new ASTNode("IF", $3, $5); /* Simplified for now */ }
     ;
 
 while_statement
-    : WHILE '(' bexp ')' block
+    : WHILE '(' bexp ')' block { $$ = new ASTNode("WHILE", $3, $5); }
     ;
 
 call_list_typed : /* empty */ {

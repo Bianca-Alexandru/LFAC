@@ -1,15 +1,43 @@
 summon z as com;
 summon c as com;
-summon x as int;
-summon y as int;
+summon m as float;
+summon x as com;
+summon y as com;
+summon iter as int;
+summon limit as float;
 
 Hello, world!
     c = -0.8 + 0.156i;
-    z = 0.0 + 0.0i;
+    limit = 2.0;
+    
+    x = 0.0 + 0.0i;
+    while (real(x) < 500.0) {
+        y = 0.0 + 0.0i;
+        while (real(y) < 500.0) {
+            
+            z = (x / 125.0+0i - 2.0+0i) + (y / 125.0+0i - 2.0+0i)*0+1i;
+            
+            iter = 0;
+            while (iter < 20) {
+                z = z * z + c;
+                m = mag(z);
+                
+                if (m > limit) {
+                    iter = 100 ; 
+                }
+                iter = iter + 1 ;
+            }
 
-    visualize(0.5 + 0.5i);
-    visualize(-0.5 - 0.5i);
-    visualize(0.0 + 0.0i);
+            if (m <= limit) {
+                Print("pixel put");
+                Print(z);
+                visualize(z);
+            }
+            
+            y = y + 1.0 + 0.0i;
+        }
+        x = x + 1.0 + 0.0i;
+    }
     
     visualize(final);
 Goodbye, world!

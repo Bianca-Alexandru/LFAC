@@ -25,6 +25,26 @@ Value ASTNode::eval(SymTable* table) {
         return Value();
     }
 
+    if (root == "BLOCK") {
+        if (left != nullptr) left->eval(table);
+        if (right != nullptr) right->eval(table);
+        return Value();
+    }
+
+    if (root == "IF") {
+        if (left->eval(table).boolValue) {
+            right->eval(table);
+        }
+        return Value();
+    }
+
+    if (root == "WHILE") {
+        while (left->eval(table).boolValue) {
+            right->eval(table);
+        }
+        return Value();
+    }
+
     // Leaf node: variable lookup
     if (left == nullptr && right == nullptr) {
         return table->getValue(root);

@@ -1,9 +1,10 @@
 Variables:
 Scope: global (Root)
    Symbol: c              | Category: var  | Type: com  
-   Symbol: cimag          | Category: var  | Type: com  
-   Symbol: creal          | Category: var  | Type: com  
-   Symbol: i              | Category: var  | Type: int  
+   Symbol: iter           | Category: var  | Type: int  
+   Symbol: limit          | Category: var  | Type: float
    Symbol: m              | Category: var  | Type: float
+   Symbol: x              | Category: var  | Type: com  
+   Symbol: y              | Category: var  | Type: com  
    Symbol: z              | Category: var  | Type: com  
 
