@@ -937,10 +937,16 @@ case 24:
 YY_RULE_SETUP
 #line 38 "language.l"
 { 
-    float rval, ival;
-    char op;
-    sscanf(yytext, "%f%*[ \t]%c%*[ \t]%f", &rval, &op, &ival);
-    
+    float rval = 0, ival = 0;
+    char op = '+';
+    char* plusPtr = strchr(yytext, '+');
+    char* minusPtr = strchr(yytext + 1, '-'); 
+    char* opPtr = plusPtr ? plusPtr : minusPtr;
+    if (opPtr) {
+        op = *opPtr;
+        rval = atof(yytext);
+        ival = atof(opPtr + 1);
+    }
     yylval.Comp.real = rval;
     yylval.Comp.imag = (op == '-') ? -ival : ival;
     return CAT; 
@@ -948,23 +954,23 @@ YY_RULE_SETUP
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 47 "language.l"
+#line 53 "language.l"
 {yylval.Float = atof(yytext); return QAT;}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 48 "language.l"
+#line 54 "language.l"
 {yylval.Int = atoi(yytext); return ZAT;}
 	YY_BREAK
 case 27:
 /* rule 27 can match eol */
 YY_RULE_SETUP
-#line 50 "language.l"
+#line 56 "language.l"
 { yylval.Str = new std::string(yytext+1, yyleng-2); return STRING; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 52 "language.l"
+#line 58 "language.l"
 {
     //separate to fix reduce reduce conflicts for id case in exp, bexp, cexp etc
     string name = yytext;
@@ -985,26 +991,26 @@ YY_RULE_SETUP
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 70 "language.l"
+#line 76 "language.l"
 ;
 	YY_BREAK
 case 30:
 /* rule 30 can match eol */
 YY_RULE_SETUP
-#line 71 "language.l"
+#line 77 "language.l"
 {yylineno++;}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 72 "language.l"
+#line 78 "language.l"
 {return yytext[0];}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 76 "language.l"
+#line 82 "language.l"
 ECHO;
 	YY_BREAK
-#line 1008 "lex.yy.c"
+#line 1014 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2009,4 +2015,4 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 76 "language.l"
+#line 82 "language.l"

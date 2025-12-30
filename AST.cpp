@@ -143,6 +143,7 @@ Value ASTNode::eval(SymTable* table) {
         Value l = left->eval(table);
         if (l.type == "int") return Value(-l.intValue);
         if (l.type == "float") return Value(-l.floatValue);
+        if (l.type == "com") return Value(-l.comValue.real, -l.comValue.imag);
         return l;
     }
 

@@ -36,10 +36,16 @@ extern SymTable* current;
 "=/=" {return NEQ;}
 
 -?([0-9]*\.[0-9]+|[0-9]+)[ \t]*[+-][ \t]*([0-9]*\.[0-9]+|[0-9]+)"i" { 
-    float rval, ival;
-    char op;
-    sscanf(yytext, "%f%*[ \t]%c%*[ \t]%f", &rval, &op, &ival);
-    
+    float rval = 0, ival = 0;
+    char op = '+';
+    char* plusPtr = strchr(yytext, '+');
+    char* minusPtr = strchr(yytext + 1, '-'); 
+    char* opPtr = plusPtr ? plusPtr : minusPtr;
+    if (opPtr) {
+        op = *opPtr;
+        rval = atof(yytext);
+        ival = atof(opPtr + 1);
+    }
     yylval.Comp.real = rval;
     yylval.Comp.imag = (op == '-') ? -ival : ival;
     return CAT; 

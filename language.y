@@ -304,37 +304,47 @@ exp : exp '+' exp {
         delete $1;
     }
     | ID_INT OF ID {
+        string fieldType = "int";
         if(!current->existsId($3)) {
             errorCount++;
             string msg = "Variable '" + *$3 + "' not defined";
             yyerror(msg.c_str());
         } else {
             IdInfo* objInfo = current->getId($3);
-            if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Field '" + *$1 + "' does not exist in class";
-                yyerror(msg.c_str());
+            if(objInfo && objInfo->classScope) {
+                if (objInfo->classScope->existsIdLocal($1)) {
+                    fieldType = objInfo->classScope->getType($1);
+                } else {
+                    errorCount++;
+                    string msg = "Field '" + *$1 + "' does not exist in class";
+                    yyerror(msg.c_str());
+                }
             }
         }
         $$ = new ASTNode("OTHER", nullptr, nullptr);
-        $$->type = "int";
+        $$->type = fieldType;
         delete $1; delete $3;
     }
     | ID_FLOAT OF ID {
+        string fieldType = "float";
         if(!current->existsId($3)) {
             errorCount++;
             string msg = "Variable '" + *$3 + "' not defined";
             yyerror(msg.c_str());
         } else {
             IdInfo* objInfo = current->getId($3);
-            if(objInfo && objInfo->classScope && !objInfo->classScope->existsId($1)) {
-                errorCount++;
-                string msg = "Field '" + *$1 + "' does not exist in class";
-                yyerror(msg.c_str());
+            if(objInfo && objInfo->classScope) {
+                if (objInfo->classScope->existsIdLocal($1)) {
+                    fieldType = objInfo->classScope->getType($1);
+                } else {
+                    errorCount++;
+                    string msg = "Field '" + *$1 + "' does not exist in class";
+                    yyerror(msg.c_str());
+                }
             }
         }
         $$ = new ASTNode("OTHER", nullptr, nullptr);
-        $$->type = "float";
+        $$->type = fieldType;
         delete $1; delete $3;
     }
     | MAG '(' cexp ')' {
@@ -444,6 +454,17 @@ bexp : BOOL {
         $$->type = "bool";
      }
      | '(' bexp ')' { $$ = $2; }
+     | ID_BOOL OF ID {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+        }
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = "bool";
+        delete $1; delete $3;
+    }
      ;
 
 
@@ -458,6 +479,17 @@ cexp :  CAT {
         }
         $$ = new ASTNode(*$1, "com");
         delete $1;
+    }
+    | ID_COM OF ID {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+        }
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = "com";
+        delete $1; delete $3;
     }
     | cexp '+' cexp {
         $$ = new ASTNode("+", $1, $3);
@@ -494,6 +526,17 @@ stexp : STRING {
         $$ = new ASTNode(*$1, "string");
         delete $1;
     }
+    | ID_STR OF ID {
+        if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
+        else {
+            IdInfo* info = current->getId($3);
+            if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
+            else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
+        }
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = "string";
+        delete $1; delete $3;
+    }
     | stexp '+' stexp {
         $$ = new ASTNode("+", $1, $3);
         $$->type = "string";
@@ -527,11 +570,15 @@ param : TYPENAME ANYID
 
 main : BEGIN_MAIN list END_MAIN  
     {
-        // Execute main block by evaluating all binary trees
-        for (ASTNode* node : *$2) {
-            if (node != nullptr) {
-                node->eval(current); 
+        if (errorCount == 0) {
+            cout << "--- Starting Execution ---" << endl;
+            // Execute main block by evaluating all binary trees
+            for (ASTNode* node : *$2) {
+                if (node != nullptr) {
+                    node->eval(current); 
+                }
             }
+            cout << "--- Execution Finished ---" << endl;
         }
     }
     ;
@@ -607,13 +654,14 @@ simple_statement
         delete $1;
     }
     | ID OF ID ASSIGN typed_exp {
+        string fieldType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
             if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
             else {
-                string fieldType = info->classScope->getType($1);
+                fieldType = info->classScope->getType($1);
                 if (fieldType != $5->type) {
                      errorCount++;
                      string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
@@ -623,15 +671,17 @@ simple_statement
         }
         delete $1; delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = fieldType;
     }
     | ID_INT OF ID ASSIGN typed_exp {
+        string fieldType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
             if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
             else {
-                string fieldType = info->classScope->getType($1);
+                fieldType = info->classScope->getType($1);
                 if (fieldType != $5->type) {
                      errorCount++;
                      string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
@@ -641,15 +691,17 @@ simple_statement
         }
         delete $1; delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = fieldType;
     }
     | ID_FLOAT OF ID ASSIGN typed_exp {
+        string fieldType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
             if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
             else {
-                string fieldType = info->classScope->getType($1);
+                fieldType = info->classScope->getType($1);
                 if (fieldType != $5->type) {
                      errorCount++;
                      string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
@@ -659,15 +711,17 @@ simple_statement
         }
         delete $1; delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = fieldType;
     }
     | ID_BOOL OF ID ASSIGN typed_exp {
+        string fieldType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
             if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
             else {
-                string fieldType = info->classScope->getType($1);
+                fieldType = info->classScope->getType($1);
                 if (fieldType != $5->type) {
                      errorCount++;
                      string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
@@ -677,15 +731,17 @@ simple_statement
         }
         delete $1; delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = fieldType;
     }
     | ID_COM OF ID ASSIGN typed_exp {
+        string fieldType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
             if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
             else {
-                string fieldType = info->classScope->getType($1);
+                fieldType = info->classScope->getType($1);
                 if (fieldType != $5->type) {
                      errorCount++;
                      string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
@@ -695,15 +751,17 @@ simple_statement
         }
         delete $1; delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = fieldType;
     }
     | ID_STR OF ID ASSIGN typed_exp {
+        string fieldType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
             if (!info->classScope) { errorCount++; yyerror("Not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; yyerror("Field does not exist"); }
             else {
-                string fieldType = info->classScope->getType($1);
+                fieldType = info->classScope->getType($1);
                 if (fieldType != $5->type) {
                      errorCount++;
                      string msg = "Field assignment type mismatch: cannot assign " + $5->type + " to " + fieldType + " field '" + *$1 + "'";
@@ -713,6 +771,7 @@ simple_statement
         }
         delete $1; delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = fieldType;
     }
 
     /*| ID ASSIGN exp
@@ -721,6 +780,7 @@ simple_statement
     | ID ASSIGN bexp*/ //not yet declared variables get generic id
     //can remove comment later after the semantic checks that the variable exists 
     | ID '(' call_list_typed ')' { 
+        string funcType = "void";
         if(!current->existsId($1)) {
             errorCount++;
             string msg = "Function '" + *$1 + "' not defined";
@@ -729,6 +789,7 @@ simple_statement
             // Verifică tipurile parametrilor
             IdInfo* funcInfo = current->getId($1);
             if(funcInfo && funcInfo->category == "func") {
+                funcType = funcInfo->type;
                 vector<string>& expectedTypes = funcInfo->params;
                 vector<string>& actualTypes = *$3;
                 
@@ -755,134 +816,159 @@ simple_statement
         delete $1;
         delete $3;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = funcType;
     }
     
     /* --- INCEPUT BLOC NOU PENTRU METODE --- */
     | ID OF ID '(' call_list_typed ')' {
+        string methodType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
             if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
             else {
                 IdInfo* methodInfo = info->classScope->getId($1);
                 if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
-                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
                 else {
-                    for(size_t i=0; i<methodInfo->params.size(); i++) {
-                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    methodType = methodInfo->type;
+                    if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                    else {
+                        for(size_t i=0; i<methodInfo->params.size(); i++) {
+                            if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                        }
                     }
                 }
             }
         }
         delete $1; delete $3; delete $5;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = methodType;
     }
     | ID_INT OF ID '(' call_list_typed ')' {
+        string methodType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
             if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
             else {
                 IdInfo* methodInfo = info->classScope->getId($1);
                 if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
-                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
                 else {
-                    for(size_t i=0; i<methodInfo->params.size(); i++) {
-                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    methodType = methodInfo->type;
+                    if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                    else {
+                        for(size_t i=0; i<methodInfo->params.size(); i++) {
+                            if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                        }
                     }
                 }
             }
         }
         delete $1; delete $3; delete $5;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = methodType;
     }
     | ID_FLOAT OF ID '(' call_list_typed ')' {
+        string methodType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
             if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
             else {
                 IdInfo* methodInfo = info->classScope->getId($1);
                 if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
-                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
                 else {
-                    for(size_t i=0; i<methodInfo->params.size(); i++) {
-                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    methodType = methodInfo->type;
+                    if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                    else {
+                        for(size_t i=0; i<methodInfo->params.size(); i++) {
+                            if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                        }
                     }
                 }
             }
         }
         delete $1; delete $3; delete $5;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = methodType;
     }
     | ID_BOOL OF ID '(' call_list_typed ')' {
+        string methodType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
             if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
             else {
                 IdInfo* methodInfo = info->classScope->getId($1);
                 if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
-                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
                 else {
-                    for(size_t i=0; i<methodInfo->params.size(); i++) {
-                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    methodType = methodInfo->type;
+                    if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                    else {
+                        for(size_t i=0; i<methodInfo->params.size(); i++) {
+                            if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                        }
                     }
                 }
             }
         }
         delete $1; delete $3; delete $5;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = methodType;
     }
     | ID_COM OF ID '(' call_list_typed ')' {
+        string methodType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
             if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
             else {
                 IdInfo* methodInfo = info->classScope->getId($1);
                 if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
-                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
                 else {
-                    for(size_t i=0; i<methodInfo->params.size(); i++) {
-                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    methodType = methodInfo->type;
+                    if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                    else {
+                        for(size_t i=0; i<methodInfo->params.size(); i++) {
+                            if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                        }
                     }
                 }
             }
         }
         delete $1; delete $3; delete $5;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = methodType;
     }
     | ID_STR OF ID '(' call_list_typed ')' {
+        string methodType = "void";
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
         else {
             IdInfo* info = current->getId($3);
-            string objType = current->getType($3);
             if (!info->classScope) { errorCount++; yyerror("Variable is not a class instance"); }
             else if (!info->classScope->existsIdLocal($1)) { errorCount++; string msg="Method '"+*$1+"' does not exist"; yyerror(msg.c_str()); }
             else {
                 IdInfo* methodInfo = info->classScope->getId($1);
                 if(methodInfo->category != "func") { errorCount++; yyerror("Not a function"); }
-                else if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
                 else {
-                    for(size_t i=0; i<methodInfo->params.size(); i++) {
-                        if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                    methodType = methodInfo->type;
+                    if(methodInfo->params.size() != $5->size()) { errorCount++; yyerror("Wrong parameter count"); }
+                    else {
+                        for(size_t i=0; i<methodInfo->params.size(); i++) {
+                            if(methodInfo->params[i] != $5->at(i)) { errorCount++; yyerror("Parameter type mismatch"); }
+                        }
                     }
                 }
             }
         }
         delete $1; delete $3; delete $5;
         $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = methodType;
     }
     
     | PRINT '(' exp ')' { $$ = new ASTNode("Print", $3, nullptr); }
