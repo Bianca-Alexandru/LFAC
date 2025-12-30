@@ -63,8 +63,7 @@ string* tempClassName = NULL;
 %token<Float> QAT
 %token<Comp> CAT
 %token<Str> ID TYPE STRING ID_BOOL ID_COM ID_STR ID_INT ID_FLOAT
-%token MAG REAL IMAG 
-
+%token MAG REAL IMAG VISUALIZE FINAL
 %token IF ELSE WHILE
 %token PRINT
 
@@ -975,6 +974,12 @@ simple_statement
     | PRINT '(' stexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
     | PRINT '(' cexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
     | PRINT '(' bexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
+    | VISUALIZE '(' cexp ')' { 
+        $$ = new ASTNode("VisualizePoint", $3, nullptr); 
+    }
+    | VISUALIZE '(' FINAL ')' { 
+        $$ = new ASTNode("VisualizeFinal", nullptr, nullptr); 
+    }
     ;
 
 block

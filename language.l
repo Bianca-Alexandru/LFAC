@@ -23,6 +23,8 @@ extern SymTable* current;
 "mag"  {return MAG;}
 "real" {return REAL;}
 "imag" {return IMAG;}
+"visualize" {return VISUALIZE;}
+"final" {return FINAL;}
 
 
 "T" {yylval.Bool = true; return BOOL;}

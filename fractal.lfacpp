@@ -1,0 +1,15 @@
+summon z as com;
+summon c as com;
+summon x as int;
+summon y as int;
+
+Hello, world!
+    c = -0.8 + 0.156i;
+    z = 0.0 + 0.0i;
+
+    visualize(0.5 + 0.5i);
+    visualize(-0.5 - 0.5i);
+    visualize(0.0 + 0.0i);
+    
+    visualize(final);
+Goodbye, world!

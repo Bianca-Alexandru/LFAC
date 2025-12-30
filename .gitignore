@@ -10,3 +10,5 @@
 !.gitignore
 !AST.h
 !AST.cpp
+!fractal.lfacpp
+!result.ppm
