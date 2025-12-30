@@ -276,7 +276,7 @@ exp : exp '+' exp {
     }
     | '(' exp ')' { $$ = $2; }
     | '-' exp %prec UMINUS {
-        $$ = new ASTNode("-", nullptr, $2);
+        $$ = new ASTNode("UMINUS", $2, nullptr);
         $$->type = $2->type;
     }
     | QAT {
@@ -316,7 +316,8 @@ exp : exp '+' exp {
                 yyerror(msg.c_str());
             }
         }
-        $$ = new ASTNode(*$1 + " OF " + *$3, "int");
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = "int";
         delete $1; delete $3;
     }
     | ID_FLOAT OF ID {
@@ -332,7 +333,8 @@ exp : exp '+' exp {
                 yyerror(msg.c_str());
             }
         }
-        $$ = new ASTNode(*$1 + " OF " + *$3, "float");
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
+        $$->type = "float";
         delete $1; delete $3;
     }
     | MAG '(' cexp ')' {
@@ -523,32 +525,34 @@ param : TYPENAME ANYID
       ; 
       
 
-main : BEGIN_MAIN list END_MAIN {
-    if (errorCount == 0) {
+main : BEGIN_MAIN list END_MAIN  
+    {
+        // Execute main block by evaluating all binary trees
         for (ASTNode* node : *$2) {
             if (node != nullptr) {
-                node->eval(current);
+                node->eval(current); 
             }
         }
     }
-}
-     ;
+    ;
      
-list: //empty
+list: // empty  
     {
-        $$ = new vector<ASTNode*>();
+        $$ = new vector<ASTNode*>(); // Initialize list of ast
     }
-    | list statement
+    | list statement 
     {
         $$ = $1;
-        if ($2 != nullptr) $$->push_back($2);
+        if ($2 != nullptr) {
+            $$->push_back($2); // get non-null ASTs 
+        }
     }
     ;
 
 statement
-    : simple_statement ';' { $$ = $1; }
-    | if_statement { $$ = nullptr; }
-    | while_statement { $$ = nullptr; }
+    : simple_statement ';' { $$ = $1; } 
+    | if_statement { $$ = nullptr; } //null ast for if while
+    | while_statement { $$ = nullptr; } 
     ;
 
 simple_statement
@@ -618,7 +622,7 @@ simple_statement
             }
         }
         delete $1; delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_INT OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -636,7 +640,7 @@ simple_statement
             }
         }
         delete $1; delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_FLOAT OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -654,7 +658,7 @@ simple_statement
             }
         }
         delete $1; delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_BOOL OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -672,7 +676,7 @@ simple_statement
             }
         }
         delete $1; delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_COM OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -690,7 +694,7 @@ simple_statement
             }
         }
         delete $1; delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_STR OF ID ASSIGN typed_exp {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -708,7 +712,7 @@ simple_statement
             }
         }
         delete $1; delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
 
     /*| ID ASSIGN exp
@@ -750,7 +754,7 @@ simple_statement
         }
         delete $1;
         delete $3;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     
     /* --- INCEPUT BLOC NOU PENTRU METODE --- */
@@ -773,7 +777,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_INT OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -794,7 +798,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_FLOAT OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -815,7 +819,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_BOOL OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -836,7 +840,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_COM OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -857,7 +861,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     | ID_STR OF ID '(' call_list_typed ')' {
         if(!current->existsId($3)) { errorCount++; yyerror("Object not defined"); }
@@ -878,7 +882,7 @@ simple_statement
             }
         }
         delete $1; delete $3; delete $5;
-        $$ = nullptr; // Not required for AST yet
+        $$ = new ASTNode("OTHER", nullptr, nullptr);
     }
     
     | PRINT '(' exp ')' { $$ = new ASTNode("Print", $3, nullptr); }
