@@ -235,6 +235,286 @@ typed_exp : exp { $$ = $1; }
             $$ = new ASTNode(*$1, current->getType($1));
             delete $1;
              }
+          | ID '(' call_list_typed ')' {
+            string returnType = "void";
+            if(!current->existsId($1)) {
+                errorCount++;
+                string msg = "Function '" + *$1 + "' not defined";
+                yyerror(msg.c_str());
+            } else {
+                IdInfo* funcInfo = current->getId($1);
+                if(funcInfo->category != "func") {
+                    errorCount++;
+                    string msg = "'" + *$1 + "' is not a function";
+                    yyerror(msg.c_str());
+                } else {
+                    returnType = funcInfo->type;
+                    if(funcInfo->params.size() != $3->size()) {
+                        errorCount++;
+                        yyerror("Wrong parameter count");
+                    } else {
+                        for(size_t i = 0; i < funcInfo->params.size(); i++) {
+                            if(funcInfo->params[i] != $3->at(i)) {
+                                errorCount++;
+                                yyerror("Parameter type mismatch");
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3;
+            $$ = new ASTNode("CALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_INT '(' call_list_typed ')' {
+            string returnType = "int";
+            if(current->existsId($1)) {
+                IdInfo* funcInfo = current->getId($1);
+                if(funcInfo->category == "func") {
+                    returnType = funcInfo->type;
+                    if(funcInfo->params.size() != $3->size()) {
+                        errorCount++; yyerror("Wrong parameter count");
+                    } else {
+                        for(size_t i = 0; i < funcInfo->params.size(); i++) {
+                            if(funcInfo->params[i] != $3->at(i)) {
+                                errorCount++; yyerror("Parameter type mismatch");
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3;
+            $$ = new ASTNode("CALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_FLOAT '(' call_list_typed ')' {
+            string returnType = "float";
+            if(current->existsId($1)) {
+                IdInfo* funcInfo = current->getId($1);
+                if(funcInfo->category == "func") {
+                    returnType = funcInfo->type;
+                    if(funcInfo->params.size() != $3->size()) {
+                        errorCount++; yyerror("Wrong parameter count");
+                    } else {
+                        for(size_t i = 0; i < funcInfo->params.size(); i++) {
+                            if(funcInfo->params[i] != $3->at(i)) {
+                                errorCount++; yyerror("Parameter type mismatch");
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3;
+            $$ = new ASTNode("CALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_BOOL '(' call_list_typed ')' {
+            string returnType = "bool";
+            if(current->existsId($1)) {
+                IdInfo* funcInfo = current->getId($1);
+                if(funcInfo->category == "func") {
+                    returnType = funcInfo->type;
+                    if(funcInfo->params.size() != $3->size()) {
+                        errorCount++; yyerror("Wrong parameter count");
+                    } else {
+                        for(size_t i = 0; i < funcInfo->params.size(); i++) {
+                            if(funcInfo->params[i] != $3->at(i)) {
+                                errorCount++; yyerror("Parameter type mismatch");
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3;
+            $$ = new ASTNode("CALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_COM '(' call_list_typed ')' {
+            string returnType = "com";
+            if(current->existsId($1)) {
+                IdInfo* funcInfo = current->getId($1);
+                if(funcInfo->category == "func") {
+                    returnType = funcInfo->type;
+                    if(funcInfo->params.size() != $3->size()) {
+                        errorCount++; yyerror("Wrong parameter count");
+                    } else {
+                        for(size_t i = 0; i < funcInfo->params.size(); i++) {
+                            if(funcInfo->params[i] != $3->at(i)) {
+                                errorCount++; yyerror("Parameter type mismatch");
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3;
+            $$ = new ASTNode("CALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_STR '(' call_list_typed ')' {
+            string returnType = "string";
+            if(current->existsId($1)) {
+                IdInfo* funcInfo = current->getId($1);
+                if(funcInfo->category == "func") {
+                    returnType = funcInfo->type;
+                    if(funcInfo->params.size() != $3->size()) {
+                        errorCount++; yyerror("Wrong parameter count");
+                    } else {
+                        for(size_t i = 0; i < funcInfo->params.size(); i++) {
+                            if(funcInfo->params[i] != $3->at(i)) {
+                                errorCount++; yyerror("Parameter type mismatch");
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3;
+            $$ = new ASTNode("CALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID OF ID '(' call_list_typed ')' {
+            string returnType = "void";
+            if(current->existsId($3)) {
+                IdInfo* info = current->getId($3);
+                if(info->classScope && info->classScope->existsIdLocal($1)) {
+                    IdInfo* methodInfo = info->classScope->getId($1);
+                    if(methodInfo->category == "func") {
+                        returnType = methodInfo->type;
+                        if(methodInfo->params.size() != $5->size()) {
+                            errorCount++; yyerror("Wrong parameter count");
+                        } else {
+                            for(size_t i = 0; i < methodInfo->params.size(); i++) {
+                                if(methodInfo->params[i] != $5->at(i)) {
+                                    errorCount++; yyerror("Parameter type mismatch");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3; delete $5;
+            $$ = new ASTNode("MCALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_INT OF ID '(' call_list_typed ')' {
+            string returnType = "int";
+            if(current->existsId($3)) {
+                IdInfo* info = current->getId($3);
+                if(info->classScope && info->classScope->existsIdLocal($1)) {
+                    IdInfo* methodInfo = info->classScope->getId($1);
+                    if(methodInfo->category == "func") {
+                        returnType = methodInfo->type;
+                        if(methodInfo->params.size() != $5->size()) {
+                            errorCount++; yyerror("Wrong parameter count");
+                        } else {
+                            for(size_t i = 0; i < methodInfo->params.size(); i++) {
+                                if(methodInfo->params[i] != $5->at(i)) {
+                                    errorCount++; yyerror("Parameter type mismatch");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3; delete $5;
+            $$ = new ASTNode("MCALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_FLOAT OF ID '(' call_list_typed ')' {
+            string returnType = "float";
+            if(current->existsId($3)) {
+                IdInfo* info = current->getId($3);
+                if(info->classScope && info->classScope->existsIdLocal($1)) {
+                    IdInfo* methodInfo = info->classScope->getId($1);
+                    if(methodInfo->category == "func") {
+                        returnType = methodInfo->type;
+                        if(methodInfo->params.size() != $5->size()) {
+                            errorCount++; yyerror("Wrong parameter count");
+                        } else {
+                            for(size_t i = 0; i < methodInfo->params.size(); i++) {
+                                if(methodInfo->params[i] != $5->at(i)) {
+                                    errorCount++; yyerror("Parameter type mismatch");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3; delete $5;
+            $$ = new ASTNode("MCALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_BOOL OF ID '(' call_list_typed ')' {
+            string returnType = "bool";
+            if(current->existsId($3)) {
+                IdInfo* info = current->getId($3);
+                if(info->classScope && info->classScope->existsIdLocal($1)) {
+                    IdInfo* methodInfo = info->classScope->getId($1);
+                    if(methodInfo->category == "func") {
+                        returnType = methodInfo->type;
+                        if(methodInfo->params.size() != $5->size()) {
+                            errorCount++; yyerror("Wrong parameter count");
+                        } else {
+                            for(size_t i = 0; i < methodInfo->params.size(); i++) {
+                                if(methodInfo->params[i] != $5->at(i)) {
+                                    errorCount++; yyerror("Parameter type mismatch");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3; delete $5;
+            $$ = new ASTNode("MCALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_COM OF ID '(' call_list_typed ')' {
+            string returnType = "com";
+            if(current->existsId($3)) {
+                IdInfo* info = current->getId($3);
+                if(info->classScope && info->classScope->existsIdLocal($1)) {
+                    IdInfo* methodInfo = info->classScope->getId($1);
+                    if(methodInfo->category == "func") {
+                        returnType = methodInfo->type;
+                        if(methodInfo->params.size() != $5->size()) {
+                            errorCount++; yyerror("Wrong parameter count");
+                        } else {
+                            for(size_t i = 0; i < methodInfo->params.size(); i++) {
+                                if(methodInfo->params[i] != $5->at(i)) {
+                                    errorCount++; yyerror("Parameter type mismatch");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3; delete $5;
+            $$ = new ASTNode("MCALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
+          | ID_STR OF ID '(' call_list_typed ')' {
+            string returnType = "string";
+            if(current->existsId($3)) {
+                IdInfo* info = current->getId($3);
+                if(info->classScope && info->classScope->existsIdLocal($1)) {
+                    IdInfo* methodInfo = info->classScope->getId($1);
+                    if(methodInfo->category == "func") {
+                        returnType = methodInfo->type;
+                        if(methodInfo->params.size() != $5->size()) {
+                            errorCount++; yyerror("Wrong parameter count");
+                        } else {
+                            for(size_t i = 0; i < methodInfo->params.size(); i++) {
+                                if(methodInfo->params[i] != $5->at(i)) {
+                                    errorCount++; yyerror("Parameter type mismatch");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            delete $1; delete $3; delete $5;
+            $$ = new ASTNode("MCALL", nullptr, nullptr);
+            $$->type = returnType;
+          }
           ;
 
 exp : exp '+' exp {
@@ -980,10 +1260,7 @@ simple_statement
         $$->type = methodType;
     }
     
-    | PRINT '(' exp ')' { $$ = new ASTNode("Print", $3, nullptr); }
-    | PRINT '(' stexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
-    | PRINT '(' cexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
-    | PRINT '(' bexp ')' { $$ = new ASTNode("Print", $3, nullptr); }
+    | PRINT '(' typed_exp ')' { $$ = new ASTNode("Print", $3, nullptr); }
     | VISUALIZE '(' cexp ')' { 
         $$ = new ASTNode("VisualizePoint", $3, nullptr); 
     }
