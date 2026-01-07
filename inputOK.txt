@@ -1,0 +1,92 @@
+arise A {
+    summon :)x as int;
+    summon :)y as int;
+    summon init as void() {
+        :)x = 19;
+        :)y = 90;
+    };
+    summon :)g as int(int z) {
+        give z + 100;
+    };
+};
+
+summon f as int(int z) {
+    summon x as int;
+    summon b as int;
+    summon flag as bool;
+    x = 5;
+    b = 10;
+
+    if ( flag == T ) {
+        give x+b;
+    }
+    give z*10;
+};
+
+arise B {
+    summon :)b as int;
+    summon :)bb as int;
+    summon init as void() {
+        :)b = 5;
+        :)bb = 10;
+    };
+    summon :)g as int(int z) {
+        summon a as A;
+        summon x as int;
+        x = 100;
+        give x + :)x of a + z;
+    };
+    summon :)f as int(int z) {
+        give 200 * z;
+    };
+};
+
+summon bfunc as string(bool b, string s) {
+    if (b == T) {
+        give s;
+    } else {
+        give "bau";
+    }
+};
+
+summon fx as float;
+summon s as string;
+summon ix as int;
+summon iy as int;
+summon b1 as bool;
+summon b2 as bool;
+summon obb as B;
+summon oba as A;
+
+Hello, world!
+    fx = 65.0;
+    fx = fx + 10.0 * fx - 65.0;
+    Print(fx);
+
+    s = "test";
+    Print(s);
+    s = "otherstr";
+    Print(s);
+
+    ix = 10;
+    ix = :)x of oba;
+    ix = ix + (ix + f(ix * 4)) * 2 + :)x of oba * :)y of oba + :)g of oba(10) + :)b of obb * :)bb of obb;
+    Print(ix);
+
+    :)x of oba = f(1000);
+    :)y of oba = f(100);
+    b2 = T;
+    b1 = b2 || !b2;
+    Print(bfunc(b1, "s"));
+
+    Print(f(ix) + 5 > 5 + :)b of obb);
+    Print(ix + 5 > ix + 6);
+    Print(b1 == F);
+    Print(:)x of oba == :)y of oba);
+
+    Print(ix + 5 > iy + 6 || (b1 == F && f(ix) + 5 > 5 + :)b of obb) || :)x of oba == :)y of oba);
+
+    if (ix + 2 > ix + 5 && ix + 3 > f(45 * 3) - 10) {
+        ix = 100;
+    }
+Goodbye, world!

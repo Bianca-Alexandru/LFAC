@@ -11,32 +11,39 @@ Hello, world!
     limit = 2.0;
     
     x = 0.0 + 0.0i;
-    while (real(x) < 500.0) {
+    while (real(x) < 2000.0) {
+        if (real(x) == 200.0) { Print("10 percent done"); }
+        if (real(x) == 400.0) { Print("20 percent done"); }
+        if (real(x) == 600.0) { Print("30 percent done"); }
+        if (real(x) == 800.0) { Print("40 percent done"); }
+        if (real(x) == 1000.0) { Print("50 percent done"); }
+        if (real(x) == 1200.0) { Print("60 percent done"); }
+        if (real(x) == 1400.0) { Print("70 percent done"); }
+        if (real(x) == 1600.0) { Print("80 percent done"); }
+        if (real(x) == 1800.0) { Print("90 percent done"); }
         y = 0.0 + 0.0i;
-        while (real(y) < 500.0) {
+        while (real(y) < 2000.0) {
             
-            z = (x / 125.0+0i - 2.0+0i) + (y / 125.0+0i - 2.0+0i)*0+1i;
+            z = (x / 500.0+0.0i - 2.0+0.0i) + (y / 500.0+0.0i - 2.0+0.0i)*0.0+1.0i;
             
             iter = 0;
-            while (iter < 20) {
+            while (iter < 250) {
                 z = z * z + c;
                 m = mag(z);
                 
                 if (m > limit) {
-                    iter = 100 ; 
+                    iter = 500; 
                 }
-                iter = iter + 1 ;
+                iter = iter + 1;
             }
 
             if (m <= limit) {
-                Print("pixel put");
-                Print(z);
                 visualize(z);
             }
             
-            y = y + 1.0 + 0.0i;
+            y = y + 0.25 + 0.0i;
         }
-        x = x + 1.0 + 0.0i;
+        x = x + 0.25 + 0.0i;
     }
     
     visualize(final);

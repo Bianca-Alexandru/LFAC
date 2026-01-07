@@ -57,7 +57,7 @@ public:
         return *this;
     }
 
-    string toString() {
+    string toString() const {
         if (type == "int") return to_string(intValue);
         if (type == "float") return to_string(floatValue);
         if (type == "bool") return boolValue ? "T" : "F";
@@ -78,7 +78,9 @@ class IdInfo {
     Value val;
 
     IdInfo() : classScope(NULL){}//adaugam pt initializare
-    IdInfo(string* type, string* name, string* category) : type(*type), name(*name), category(*category) {}
+    IdInfo(string* type, string* name, string* category) : type(*type), name(*name), category(*category), classScope(NULL) {
+        val = Value(*type, true);
+    }
 };
 
 class SymTable {

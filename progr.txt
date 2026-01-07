@@ -1,82 +1,45 @@
-summon z as com;
-summon c as com;
-summon m as float;
-summon i as com;
 summon x as int;
 summon b1 as bool;
 summon b2 as bool;
-summon st as string;
+summon m as float;
+summon z as com;
 
-arise Pixel {
-    summon r as float;
-    summon ii as float;
-    summon draw as com (Pixel p1, Pixel p2){
-        summon xyz as float;
-    };
-};
-
-summon p as Pixel;
+// Feature: Function declaration without body
+summon protoFunc as int(int a);
 
 summon testShadow as void () {
-
     summon x as float;
-    
     x = 5.5;
     Print(x); 
 };
 
-summon iterate as void (float limit) {
-    c = 0.35 + 0.4i;
-    z = 0.0 + 0.0i;
-
-    x = 0;
-    while (x < 10) {
-        z = z * z + (c + 5+2i);
-        
-        m = mag(z + 0+2i);
-        
-        if (m > limit) {
-            Print(m);
-            x = 100; 
-        }
-        
-        x = x + 1;
-    }
-};
-
-summon manyparams as com (int a, int b, int d, float ab, float bc, com xy, com xz, string abcxz);
-
 Hello, world!
+    x = 999;
+    
+    // Existing shadowing test
+    Print(x);       
+    testShadow();    
+    Print(x);       
 
+    // Feature: Unary minus on variable
+    x = -x; 
+    Print(x);
 
-x = 999;
-Print(x);       
-testShadow();    
-Print(x);       
-b1= 5 < 4;
-b2= b1 && b2;
-b1 = !T;
-z = 0.00+5i;
-z = 3.0 + 4.0i;
-z= 0                +           2i;
-x=-x;
-b1= (x<=x) ;
-b1 = b2 || (3 <4+5) && !b2;
-st= "abcdefgh" + "xyz";
-draw of p (p, p);
+    // Feature: Modulo operator
+    x = 10 % 3;
+    Print(x);
 
-z = 10 +0i * 0+ 2.5i;
-z = (3+2i) / 2.0 +0i;
+    // Feature: Not equal operator
+    b1 = (x =/= 5);
+    Print(b1);
 
-m = real(5 + 2i);
-m = imag(0+10i);
+    // Feature: Greater or equal operator
+    b2 = (x >= 1);
+    Print(b2);
 
-r of p = real(z );
-ii of p = imag(z );
-
-Print("Magnitude is:");
-Print(mag(3+4i));
-
-iterate(2.0);
+    // Feature: Complex imag() function
+    z = 1.0 + 2.5i;
+    m = imag(z);
+    Print(m);
 
 Goodbye, world!

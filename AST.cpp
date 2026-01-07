@@ -45,12 +45,16 @@ Value ASTNode::eval(SymTable* table) {
         return Value();
     }
 
+    if (root == "OTHER") {
+        return Value(this->type, true); // returns default value for the return type
+    }
+
     // Leaf node: variable lookup
     if (left == nullptr && right == nullptr) {
         return table->getValue(root);
     }
 
-    // Assignment statement: ID := expr
+    // ID := expr
     if (root == ":=") {
         Value rightVal = right->eval(table);
         // left->root contains the name of the identifier
@@ -58,14 +62,14 @@ Value ASTNode::eval(SymTable* table) {
         return rightVal;
     }
 
-    // Print statement: Print(expr)
+    // Print(expr)
     if (root == "Print") {
         Value v = left->eval(table);
         cout << v.toString() << endl;
         return v;
     }
 
-    // Arithmetic Expressions
+    // exp
     if (root == "+") {
         Value l = left->eval(table);
         Value r = right->eval(table);
@@ -119,7 +123,16 @@ Value ASTNode::eval(SymTable* table) {
         }
     }
 
-    // Boolean Expressions
+    if (root == "%") {
+        Value l = left->eval(table);
+        Value r = right->eval(table);
+        if (l.type == "int" && r.type == "int") {
+            if (r.intValue == 0) { cout << "Runtime Error: Division by zero" << endl; return Value(0); }
+            return Value(l.intValue % r.intValue);
+        }
+    }
+
+    // Bexp
     if (root == "<") {
         Value l = left->eval(table);
         Value r = right->eval(table);
@@ -205,20 +218,15 @@ Value ASTNode::eval(SymTable* table) {
     if (root == "VisualizePoint") {
         Value v = left->eval(table);
         if (v.type == "com") {
-            // Map complex coordinates (e.g., -2 to 2) to pixel coordinates (0 to 500)
+            // map complex coordinates (-2 to 2) to pixel coordinates (0 to 500)
             int x = (int)((v.comValue.real + 2.0) * (WIDTH / 4.0));
             int y = (int)((v.comValue.imag + 2.0) * (HEIGHT / 4.0));
 
             if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-                canvas[x][y] = true; // Mark as black pixel
+                canvas[x][y] = true; // black pixel
             }
         }
         return v;
-    }
-
-    // Dummy return for "OTHER" nodes (function calls, etc.)
-    if (root == "OTHER") {
-        return Value(this->type, true); // Returns default value for the return type
     }
 
     return Value();

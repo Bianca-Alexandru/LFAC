@@ -52,7 +52,11 @@ void SymTable::printVars() {
         cout << "| Category: " << info.category;
         printSpaces(5 - info.category.length());
         cout << "| Type: " << info.type;
-        printSpaces(5 - info.type.length());
+        printSpaces(10 - info.type.length());
+        
+        if (info.category == "var" || info.category == "param") {
+            cout << "| Value: " << info.val.toString();
+        }
 
         if (!info.params.empty()) {
             cout << " | Param Types: [";

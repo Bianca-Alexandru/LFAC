@@ -1,0 +1,92 @@
+arise A {
+    summon :)x as int;
+    summon :)y as int;
+    summon :|z as float;
+    summon init as void() {
+        :)x = 19;
+        :)y = 90;
+    };
+    summon :)g as int(int z) {
+        give zzz * 100; // Error: zzz undefined
+    };
+    summon :|fl as float(int x) {
+        if (x == 20) {
+            give 10.0;
+        }
+        give 20.0;
+    };
+};
+
+summon f as int(int z, float x, bool b) {
+    if (b == T && x > 1.0) {
+        give z * 10;
+    }
+    give z;
+};
+
+arise B {
+    summon :)b as int;
+    summon :)bb as int;
+    summon init as void() {
+        :)b = 5;
+        :)bb = 10;
+    };
+    summon :)g as int(int z) {
+        give z + :)b;
+    };
+    summon :)f as int(int z) {
+        if (z > 4) {
+            summon var as int; // Syntax error: nested declaration
+            var = 0;
+            give var + 5;
+        }
+        give :)b + :)bb * z;
+    };
+};
+
+summon bfunc as string(bool b, string s) {
+    if (b == T) {
+        give s;
+    } else {
+        give "bau";
+    }
+};
+
+summon fx as float;
+summon x as int;
+summon z as int;
+summon s as string;
+summon ix as int;
+summon ix as int; // Error: Redefinition of ix
+summon b1 as bool;
+summon b2 as bool;
+summon obb as B;
+summon oba as A;
+
+Hello, world!
+    zzz = 10; // Error: Undefined variable zzz
+
+    fx = 65.0;
+    ix = 10;
+    Print(fx - 65.0 + f(10, 10.0, T)); 
+    fx = fx * 10.0 + f(10, 10.0, T) + ix; // Mixture of float and int
+
+    s = "test";
+    b1 = T;
+    b2 = b1;
+    Print(s + b1); // Error: Type mismatch string + bool
+    
+    b1 = b1 + b2; // Error: Arithmetic on bools
+    fx = b1 || b2; // Error: Assigning bool to float
+    
+    :)x of oba = :)b of obb + bfunc(b1, s); // Error: int = int + string
+    :)x of oba = :)b of obb + fx; // Error: int = int + float
+
+    Print(f(ix, fx, fx)); // Error: Parameter type mismatch
+    Print(f(ix, fx, T, T)); // Error: Wrong parameter count
+
+    :)f of oba(ix); // Error: Method :)f doesn't exist in A
+    :)g of oba(fx); // Error: Parameter type mismatch for :)g
+    :)zzz of oba = 100; // Error: Field :)zzz doesn't exist in A
+    :)x of oba = :)x of oba + :|fl of oba(ix); // Error: int = int + float
+Goodbye, world!

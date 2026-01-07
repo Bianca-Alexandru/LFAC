@@ -15,6 +15,7 @@ extern SymTable* current;
 "as" {return AS;}
 "of" {return OF;}
 "arise" {return ARISE;}
+"give" {return GIVE;}
 "Print" {return PRINT;}
 "if" {return IF;}
 "else" {return ELSE;}
@@ -57,6 +58,12 @@ extern SymTable* current;
 
 \"[^"]*\"  { yylval.Str = new std::string(yytext+1, yyleng-2); return STRING; }
 
+":D"[a-zA-Z0-9]* { yylval.Str = new std::string(yytext); return ID_BOOL;}
+":)"[a-zA-Z0-9]* { yylval.Str = new std::string(yytext); return ID_INT;}
+":|"[a-zA-Z0-9]* { yylval.Str = new std::string(yytext); return ID_FLOAT;}
+":C"[a-zA-Z0-9]* { yylval.Str = new std::string(yytext); return ID_COM;}
+":("[a-zA-Z0-9]* { yylval.Str = new std::string(yytext); return ID_STR;}
+
 [a-zA-Z][a-zA-Z0-9]* {
     //separate to fix reduce reduce conflicts for id case in exp, bexp, cexp etc
     string name = yytext;
@@ -77,6 +84,7 @@ extern SymTable* current;
 
 [ \t] ;
 \n {yylineno++;}
+"//".* ; //comments
 . {return yytext[0];}
 
  

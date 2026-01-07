@@ -45,7 +45,11 @@
         "name": "keyword.operator.yellow.lfac" 
     },
     { 
-        "match": "\\b(if|else|while|void|Print|mag|real|imag)\\b", 
+        "match": "\\b(if|else|while|void|Print|mag|real|imag|give)\\b", 
+        "name": "keyword.control.lfac" 
+    },
+    {
+        "match": "(:\\)|:D|:C|:\\||:\\()",
         "name": "keyword.control.lfac" 
     },
     {
